@@ -1,0 +1,18 @@
+{
+	"irc": {
+		"host": "chat.freenode.net",
+		"port": 6697,
+		"ssl": true,
+		"nick": "cahjsbot",
+		"username": "cah",
+		"realname": "Cards against Humanity bot",
+		"pass": "",
+		"nickserv": {
+			"username": "",
+			"password": ""
+		},
+		"throttling": 100
+	},
+	"channels": ["##ircah-dev"],
+	"sets": ["base_set"]
+}
