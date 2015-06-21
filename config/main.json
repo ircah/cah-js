@@ -14,5 +14,8 @@
 		"throttling": 100
 	},
 	"channels": ["##ircah-dev"],
-	"sets": ["base_set"]
+	"collections": {
+		"default": ["base_set"]
+	},
+	"default_collection": "default"
 }

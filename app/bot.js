@@ -1,3 +1,4 @@
+var _ = require('underscore');
 var coffea = require('coffea');
 var util = require('util');
 
