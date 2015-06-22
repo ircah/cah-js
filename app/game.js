@@ -6,7 +6,7 @@ var games = {};
 
 // should this be in the config?
 var INITIAL_WAIT_SECS = 30;
-var NOT_ENOUGH_PLAYERS_WAIT_MINS = 3;
+var NOT_ENOUGH_PLAYERS_WAIT_MINS = 2;
 
 /* "external" game functions */
 
@@ -14,6 +14,7 @@ function start_game(gameid, settings) {
 	games[gameid] = {};
 	games[gameid].settings = settings;
 	games[gameid].players = [];
+	games[gameid].cards = {};
 	games[gameid].timer_start = setTimeout(function() { timer_start(gameid); }, INITIAL_WAIT_SECS * 1000);
 	games[gameid].timer_stop = null;
 	games[gameid].round_no = 1;
@@ -88,6 +89,21 @@ function _round(gameid)
 	));
 	games[gameid].q_card = cards.randomQuestionCard(games[gameid].settings.coll);
 	global.client.send(games[gameid].settings.channel, client.format.bold + "CARD: " + client.format.reset + _format_card(games[gameid].q_card));
+	_.each(games[gameid].players, function(pl) {
+		if(!games[gameid].cards[pl])
+			games[gameid].cards[pl] = [];
+		while(games[gameid].cards[pl].length < 10)
+			games[gameid].cards[pl].push(cards.randomAnswerCard(games[gameid].settings.coll));
+	});
+	_.each(games[gameid].players, function(pl) {
+		if(_.indexOf(games[gameid].players, pl) == games[gameid].czar_idx)
+			return;
+		var cards = [];
+		_.each(games[gameid].cards[pl], function(card, i) {
+			cards.push(util.format("%s[%d]%s %s", client.format.bold, i+1, client.format.reset, card));
+		});
+		global.client.notice(pl, "Your cards: " + cards.join(" "));
+	});
 }
 
 /* timers */
