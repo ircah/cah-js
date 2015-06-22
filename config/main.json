@@ -17,5 +17,6 @@
 	"collections": {
 		"default": ["base_set"]
 	},
-	"default_collection": "default"
+	"default_collection": "default",
+	"default_point_limit": 7
 }

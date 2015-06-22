@@ -14,5 +14,5 @@ exports.handle = function(evt, msg) {
 	if(global.commands[m[1]])
 		global.commands[m[1]](evt, m[2]);
 	else
-		console.log(util.format("debug: unknown command: '!%s'", m[1]));
+		console.log("[commands.js] unknown command: '!%s'", m[1]);
 };

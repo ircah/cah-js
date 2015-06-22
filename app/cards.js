@@ -51,6 +51,10 @@ exports.info = function() {
 	return util.format("%d collections, %d sets, %d cards (%d questions, %d answers)", _.size(compiled_collections), _.size(loaded_sets), black + white, black, white);
 };
 
+exports.collectionExists = function(collection) {
+	return !!compiled_collections[collection];
+};
+
 exports.getQuestionCard = function(collection) {
 	var cards = compiled_collections[collection].questions;
 	return cards[randint(cards.length - 1)];
@@ -64,5 +68,5 @@ exports.getAnswerCard = function(collection) {
 exports.setup = function() {
 	load();
 
-	console.log("debug: sucessfully loaded " + exports.info());
+	console.log("[cards.js] Loaded " + exports.info());
 };

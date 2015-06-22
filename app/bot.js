@@ -12,12 +12,12 @@ exports.setup = function() {
 	game.setup();
 
 	client.on("motd", function(motd) {
-		console.log("debug: motd arrived");
+		console.log("[bot.js] MOTD arrived");
 		client.join(global.config.channels);
 	});
 
 	client.on("message", function(evt) {
-		console.log(util.format("irc msg on %s: <%s> %s", evt.channel.getName(), evt.user.getNick(), evt.message));
+		console.log("[bot.js] %s <%s> %s", evt.channel.getName(), evt.user.getNick(), evt.message);
 		var evt2 = {};
 		evt2.user = evt.user.getNick();
 		evt2.channel = evt.channel.getName();
@@ -26,10 +26,10 @@ exports.setup = function() {
 	});
 
 	client.on("join", function(evt) {
-		console.log(util.format("irc %s joins %s", evt.user.getNick(), evt.channel.getName()));
+		console.log("[bot.js] %s joins %s", evt.user.getNick(), evt.channel.getName());
 	});
 
 	client.on("part", function(evt) {
-		console.log(util.format("irc %s leaves %s", evt.user.getNick(), evt.channel.getName()));
+		console.log("[bot.js] %s leaves %s", evt.user.getNick(), evt.channel.getName());
 	});
 };
