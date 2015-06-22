@@ -25,6 +25,7 @@ function start_game(gameid, settings) {
 	games[gameid].czar_idx = -1;
 	games[gameid].q_card = null;
 	games[gameid].round_stage = 0; // 0 -> waiting for players to play, 1 -> waiting for czar to pick winner
+	games[gameid].points = {};
 
 	global.client.send(settings.channel, util.format("Starting a new game of Cards Against Humanity. The game will start in %d seconds, type !join to join.", INITIAL_WAIT_SECS));
 }
@@ -48,6 +49,7 @@ function join_game(gameid, user)
 	if(_.indexOf(games[gameid].players, user) != -1)
 		return;
 	games[gameid].players.push(user);
+	games[gameid].points[user] = 0;
 	global.client.send(games[gameid].settings.channel, user + " joined the game.");
 	if(games[gameid].players.length >= 3 && !games[gameid].timer_round) {
 		_start_game(gameid);
@@ -129,12 +131,15 @@ function game_pick(gameid, user, cards)
 			}
 			winner = games[gameid].pick_order[cards[0] - 1];
 			global.client.send(games[gameid].settings.channel, util.format(
-				"%sWinner is:%s %s with \"%s\" and gets one awesome point... oh wait, points are not implemented yet :(",
+				"%sWinner is:%s %s with \"%s\" and gets one awesome point and has %d awesome points!",
 				global.client.format.bold,
 				global.client.format.reset,
 				winner,
-				_format_card(games[gameid].q_card, games[gameid].picks[winner])
+				_format_card(games[gameid].q_card, games[gameid].picks[winner]),
+				++games[gameid].points[winner]
 			));
+			if(_check_plimit(gameid))
+				return; // Game ended
 			_round(gameid);
 		}
 	} else {
@@ -152,14 +157,13 @@ function game_pick(gameid, user, cards)
 			global.client.send(games[gameid].settings.channel, "You can't use a card more than once.");
 			return;
 		}
+		if(_.min(cards) < 1 || _.max(cards) > 10) {
+			global.client.send(games[gameid].settings.channel, "Invalid cards selected.");
+			return;
+		}
 		var pick = [];
 		_.each(cards, function(card_idx) {
-			try {
-				pick.push(games[gameid].cards[user][card_idx - 1]);
-			} catch(e) {
-				global.client.send(games[gameid].settings.channel, "Invalid cards.");
-				return;
-			};
+			pick.push(games[gameid].cards[user][card_idx - 1]);
 		});
 		games[gameid].picks[user] = pick;
 		_.each(cards, function(card_idx) {
@@ -168,6 +172,32 @@ function game_pick(gameid, user, cards)
 		global.client.notice(user, util.format("You played: %s", _format_card(games[gameid].q_card, pick)));
 		_check_all_played(gameid);
 	}
+}
+
+function game_show_points(gameid)
+{
+	var tmp;
+	var out = "";
+	var prev_pts = -1;
+
+	tmp = _.map(games[gameid].points, function(pts, pl) {
+		return {name: pl, points: pts};
+	});
+	tmp = _.sortBy(tmp, function(a) {
+		return -a.points;
+	});
+	_.each(tmp, function(o) {
+		if(prev_pts != o.points) {
+			if(prev_pts != -1) {
+				out = out.slice(0, -2);
+				out += " (" + prev_pts + " awesome points); ";
+			}
+			prev_pts = o.points;
+		}
+		out += o.name + ", ";
+	});
+	out = out.slice(0, -2) + " (" + prev_pts + " awesome points)";
+	global.client.send(games[gameid].settings.channel, "The most horrible people: " + out);
 }
 
 /* "internal" game functions */
@@ -242,7 +272,6 @@ function _round(gameid)
 	games[gameid].round_stage = 0;
 	games[gameid].picks = {};
 
-
 	global.client.send(games[gameid].settings.channel, util.format(
 		"Round %d! %s is the card czar.",
 		games[gameid].round_no,
@@ -278,8 +307,26 @@ function _check_all_played(gameid)
 			));
 		});
 		games[gameid].round_stage = 1;
-		global.client.send(games[gameid].settings.channel, util.format("%s, pick the winner using !pick", games[gameid].players[games[gameid].czar_idx]));
+		global.client.send(games[gameid].settings.channel, util.format("%s: select the winner using !pick", games[gameid].players[games[gameid].czar_idx]));
 	}
+}
+
+function _check_plimit(gameid)
+{
+	var r = false;
+	_.each(games[gameid].points, function(pts, pl) {
+		if(pts == games[gameid].settings.plimit) {
+			global.client.send(games[gameid].settings.channel, util.format(
+				"%s reached the limit of %d awesome points and is the most horrible person around! Congratulations!",
+				pl,
+				games[gameid].settings.plimit
+			));
+			game_show_points(gameid);
+			stop_game(gameid);
+			r = true;
+		}
+	});
+	return r;
 }
 
 /* timers */
@@ -407,6 +454,12 @@ function cmd_pick(evt, args) {
 	game_pick(evt.channel, evt.user, a);
 }
 
+function cmd_points(evt, args) {
+	if(!games[evt.channel])
+		return;
+	game_show_points(evt.channel);
+}
+
 exports.setup = function() {
 	global.commands["start"] = cmd_start;
 	global.commands["stop"] = cmd_stop;
@@ -416,6 +469,7 @@ exports.setup = function() {
 	global.commands["cards"] = cmd_cards;
 	global.commands["status"] = cmd_status;
 	global.commands["pick"] = cmd_pick;
+	global.commands["points"] = cmd_points;
 
 	cards.setup();
 };
