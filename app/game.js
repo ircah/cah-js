@@ -8,17 +8,17 @@ var games = {};
 var INITIAL_WAIT_SECS = 30;
 var NOT_ENOUGH_PLAYERS_WAIT_MINS = 3;
 
-/* game logic */
+/* "external" game functions */
 
 function start_game(gameid, settings) {
-	settings.plimit = settings.plimit || global.config.default_point_limit;
-	settings.coll = settings.coll || global.config.default_collection;
-
 	games[gameid] = {};
 	games[gameid].settings = settings;
 	games[gameid].players = [];
 	games[gameid].timer_start = setTimeout(function() { timer_start(gameid); }, INITIAL_WAIT_SECS * 1000);
 	games[gameid].timer_stop = null;
+	games[gameid].round_no = 1;
+	games[gameid].czar_idx = 0;
+	games[gameid].q_card = null;
 
 	global.client.send(settings.channel, util.format("Starting a new game of Cards Against Humanity. The game will start in %d seconds, type !join to join.", INITIAL_WAIT_SECS));
 }
@@ -58,9 +58,36 @@ function game_get_players(gameid)
 	return games[gameid].players;
 }
 
+/* "internal" game functions */
+
+function _format_card(card, values)
+{
+	if(!values)
+		return card.text.replace(/%s/g, client.format.bold + "____" + client.format.reset);
+	else
+		return util.format(card.text, values)
+}
+
 function _start_game(gameid)
 {
-	global.client.send(games[gameid].settings.channel, "game should really start now");
+	global.client.send(games[gameid].settings.channel, util.format(
+		"Starting %s with '%s' cards: %s",
+		games[gameid].settings.plimit > 0 ? util.format("game until %d points", games[gameid].settings.plimit) : "infinite game",
+		games[gameid].settings.coll,
+		cards.collectionInfo(games[gameid].settings.coll)
+	));
+	_round(gameid);
+}
+
+function _round(gameid)
+{
+	global.client.send(games[gameid].settings.channel, util.format(
+		"Round %d! %s is the card czar.",
+		games[gameid].round_no,
+		games[gameid].players[games[gameid].czar_idx]
+	));
+	games[gameid].q_card = cards.randomQuestionCard(games[gameid].settings.coll);
+	global.client.send(games[gameid].settings.channel, client.format.bold + "CARD: " + client.format.reset + _format_card(games[gameid].q_card));
 }
 
 /* timers */
@@ -92,6 +119,8 @@ function cmd_start(evt, args) {
 		return;
 	}
 	var settings = {};
+	settings.plimit = global.config.default_point_limit;
+	settings.coll = global.config.default_collection;
 	settings.channel = evt.channel;
 	settings.starter = evt.user;
 
@@ -100,7 +129,9 @@ function cmd_start(evt, args) {
 		if(arg.match(/^\d+$/)) { // numeric arg -> point limit
 			try {
 				settings.plimit = parseInt(arg);
-			} catch(e) { /* *shurg* */};
+			} catch(e) {
+				// *shrug*
+			};
 		} else { // string arg -> collection
 			if(cards.collectionExists(arg))
 				settings.coll = arg;

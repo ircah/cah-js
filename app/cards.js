@@ -48,19 +48,32 @@ exports.info = function() {
 		black += _.size(set.questions);
 		white += set.answers.length;
 	});
-	return util.format("%d collections, %d sets, %d cards (%d questions, %d answers)", _.size(compiled_collections), _.size(loaded_sets), black + white, black, white);
+	return util.format("%d collections, %d sets, %d cards (%d questions / %d answers)", _.size(compiled_collections), _.size(loaded_sets), black + white, black, white);
+};
+
+exports.collectionInfo = function(coll) {
+	var black, white, setinfo = [];
+
+	black = _.size(compiled_collections[coll].questions);
+	white = compiled_collections[coll].answers.length;
+
+	_.each(compiled_collections[coll].source_sets, function(set) {
+		setinfo.push(util.format("%s (%d / %d)", loaded_sets[set].meta.name, _.size(loaded_sets[set].questions), loaded_sets[set].answers.length));
+	});
+
+	return util.format("%d cards (%d questions / %d answers): %s", black + white, black, white, setinfo.join(", "));
 };
 
 exports.collectionExists = function(collection) {
 	return !!compiled_collections[collection];
 };
 
-exports.getQuestionCard = function(collection) {
+exports.randomQuestionCard = function(collection) {
 	var cards = compiled_collections[collection].questions;
 	return cards[randint(cards.length - 1)];
 };
 
-exports.getAnswerCard = function(collection) {
+exports.randomAnswerCard = function(collection) {
 	var cards = compiled_collections[collection].answers;
 	return cards[randint(cards.length - 1)];
 };
