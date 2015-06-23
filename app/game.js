@@ -193,9 +193,7 @@ function game_pick(gameid, user, cards)
 		});
 		games[gameid].hasPlayed[user] = 1;
 		games[gameid].picks[user] = pick;
-		_.each(cards, function(card_idx) {
-			games[gameid].cards[user] = _.without(games[gameid].cards[user], games[gameid].cards[user][card_idx - 1]);
-		});
+		games[gameid].cards[user] = removeByIndex(games[gameid].cards[user], cards);
 		global.client.notice(user, util.format("You played: %s", _format_card(games[gameid].q_card, pick)));
 		_check_all_played(gameid);
 	}
@@ -527,6 +525,16 @@ function ircDevoice(client, channel, nicklist) {
 	if(tmp.length > 0) {
 		client.mode(channel, _ircModeStr("-v", tmp));
 	}
+}
+
+function removeByIndex(array, idxlist)
+{
+	var out = [];
+	_.each(array, function(elem, idx) {
+		if(_.indexOf(idxlist, idx) == -1)
+			out.push(elem);
+	});
+	return out;
 }
 
 /* commands */
