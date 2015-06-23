@@ -17,9 +17,9 @@
 	"voice_players": true,
 	"collections": {
 		"base": ["base_set"],
-		"extended": ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion"],
-		"extended_communal": ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion", "irc-against-humanity/irc-against-humanity"]
+		"extended_pure": ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion"],
+		"extended": ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion", "irc-against-humanity/irc-against-humanity"]
 	},
-	"default_collection": "extended_communal",
+	"default_collection": "extended",
 	"default_point_limit": 7
 }
