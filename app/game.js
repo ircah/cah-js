@@ -661,6 +661,12 @@ exports.setup = function() {
 	global.commands["pick"] = cmd_pick;
 	global.commands["points"] = cmd_points;
 	global.commands["swap"] = cmd_swap;
+	// Aliases.
+	global.commands["s"] = cmd_start;
+	global.commands["l"] = cmd_leave;
+	global.commands["j"] = cmd_join;
+	global.commands["p"] = cmd_pick;
+	global.commands["pts"] = cmd_points;
 	// Admin commands
 	global.commands["fpass"] = cmd_fpass;
 	global.commands["fleave"] = cmd_fleave;
