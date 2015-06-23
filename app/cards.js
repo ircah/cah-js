@@ -58,7 +58,7 @@ exports.collectionInfo = function(coll) {
 	white = compiled_collections[coll].answers.length;
 
 	_.each(compiled_collections[coll].source_sets, function(set) {
-		setinfo.push(util.format("%s (%d / %d)", loaded_sets[set].meta.name, _.size(loaded_sets[set].questions), loaded_sets[set].answers.length));
+		setinfo.push(util.format("%s (%d/%d)", loaded_sets[set].meta.name, _.size(loaded_sets[set].questions), loaded_sets[set].answers.length));
 	});
 
 	return util.format("%d cards (%d questions / %d answers): %s", black + white, black, white, setinfo.join(", "));
