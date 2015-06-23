@@ -382,6 +382,8 @@ function _check_all_played(gameid)
 
 function _check_plimit(gameid)
 {
+	if(games[gameid].settings.plimit <= 0)
+		return false;
 	var r = false;
 	_.each(games[gameid].points, function(pts, pl) {
 		if(!games[gameid])
