@@ -328,6 +328,8 @@ function _check_plimit(gameid)
 {
 	var r = false;
 	_.each(games[gameid].points, function(pts, pl) {
+		if(!games[gameid])
+			return; // if someone already won and the game was deleted, don't do anything
 		if(pts == games[gameid].settings.plimit) {
 			global.client.send(games[gameid].settings.channel, util.format(
 				"%s reached the limit of %d awesome points and is the most horrible person around! Congratulations!",
