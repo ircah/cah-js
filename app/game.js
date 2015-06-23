@@ -8,6 +8,7 @@ var games = {};
 var INITIAL_WAIT_SECS = 30;
 var NOT_ENOUGH_PLAYERS_WAIT_MINS = 2;
 var ROUND_MAX_TIME_MINS = 4;
+var SWAP_MIN_PLAYERS = 5;
 
 /* "external" game functions */
 
@@ -17,6 +18,7 @@ function start_game(gameid, settings) {
 	games[gameid].players = [];
 	games[gameid].cards = {};
 	games[gameid].picks = {};
+	games[gameid].hasPlayed = {};
 	games[gameid].pick_order = [];
 	games[gameid].timer_start = setTimeout(function() { timer_start(gameid); }, INITIAL_WAIT_SECS * 1000);
 	games[gameid].timer_stop = null;
@@ -50,6 +52,7 @@ function join_game(gameid, user)
 		return;
 	games[gameid].players.push(user);
 	games[gameid].points[user] = 0;
+	games[gameid].hasPlayed[user] = 2;
 	global.client.send(games[gameid].settings.channel, user + " joined the game.");
 	if(games[gameid].players.length >= 3 && !games[gameid].timer_round) {
 		_start_game(gameid);
@@ -68,6 +71,25 @@ function leave_game(gameid, user)
 	}
 	games[gameid].players = _.without(games[gameid].players, user);
 	_check_players(gameid, user);
+}
+
+function swap_cards(gameid, user) {
+	if (games[gameid].players.length < SWAP_MIN_PLAYERS) {
+		return global.client.send(games[gameid].settings.channel, util.format("%s: There must be at least %d players joined to use !swap.", user, SWAP_MIN_PLAYERS));
+	} else if (games[gameid].hasPlayed[user]) {
+		return global.client.send(games[gameid].settings.channel, util.format("%s: You have already picked this round.", user));
+	} else if (_.indexOf(games[gameid].players, user) == games[gameid].czar_idx) {
+		return global.client.send(games[gameid].settings.channel, util.format("%s: You can not swap your cards, because you're the card czar.", user));
+	} else if (games[gameid].points[user] === 0) {
+		return global.client.send(games[gameid].settings.channel, util.format("%s: You must have at least one awesome point to use !swap.", user));
+	}
+	// Remove cards from the player and give them new ones.
+	games[gameid].hasPlayed[user] = true;
+	games[gameid].cards[user] = [];
+	while(games[gameid].cards[user].length < 10)
+		games[gameid].cards[user].push(cards.randomAnswerCard(games[gameid].settings.coll));
+	_notice_cards(gameid, user);
+	global.client.send(games[gameid].settings.channel, util.format("%s has swapped all of their cards. They don't play this round, and they lose a awesome point. %s now has %d awesome points.", user, user, --games[gameid].points[user]));
 }
 
 function game_get_players(gameid)
@@ -107,7 +129,7 @@ function game_show_status(gameid)
 	}
 	var tmp = games[gameid].players;
 
-	_.each(games[gameid].picks, function(_trash, player) {
+	_.each(games[gameid].hasPlayed, function(_trash, player) {
 		tmp = _.without(tmp, player);
 	});
 	tmp = _.without(tmp, games[gameid].players[games[gameid].czar_idx]);
@@ -157,26 +179,26 @@ function game_pick(gameid, user, cards)
 	} else {
 		if(games[gameid].round_stage == 1)
 			return;
-		if(games[gameid].picks[user]) {
-			global.client.send(games[gameid].settings.channel, "You already picked this round.");
-			return;
+		if(games[gameid].hasPlayed[user] === 1) {
+			return global.client.send(games[gameid].settings.channel, "You already picked this round.");
+		}
+		if(games[gameid].hasPlayed[user] === 2) {
+			return global.client.send(games[gameid].settings.channel, "You joined this round. Please wait until the next round.");
 		}
 		if(cards.length != games[gameid].q_card.pick) {
-			global.client.send(games[gameid].settings.channel, util.format("You need to pick %d cards.", games[gameid].q_card.pick));
-			return;
+			return global.client.send(games[gameid].settings.channel, util.format("You need to pick %d cards.", games[gameid].q_card.pick));
 		}
 		if(cards.length != _.uniq(cards).length) {
-			global.client.send(games[gameid].settings.channel, "You can't use a card more than once.");
-			return;
+			return global.client.send(games[gameid].settings.channel, "You can't use a card more than once.");
 		}
 		if(_.min(cards) < 1 || _.max(cards) > 10) {
-			global.client.send(games[gameid].settings.channel, "Invalid cards selected.");
-			return;
+			return global.client.send(games[gameid].settings.channel, "Invalid cards selected.");
 		}
 		var pick = [];
 		_.each(cards, function(card_idx) {
 			pick.push(games[gameid].cards[user][card_idx - 1]);
 		});
+		games[gameid].hasPlayed[user] = true;
 		games[gameid].picks[user] = pick;
 		_.each(cards, function(card_idx) {
 			games[gameid].cards[user] = _.without(games[gameid].cards[user], games[gameid].cards[user][card_idx - 1]);
@@ -273,7 +295,11 @@ function _notice_cards(gameid, pl)
 		_.each(games[gameid].cards[pl], function(card, i) {
 			cards.push(util.format("%s[%d]%s %s", client.format.bold, i+1, client.format.reset, card));
 		});
-		global.client.notice(pl, "Your cards: " + cards.join(" "));
+		if (cards.length > 0) {
+			global.client.notice(pl, "Your cards: " + cards.join(" "));
+		} else {
+			global.client.notice(pl, "You have no cards.");
+		}
 	}
 }
 
@@ -283,6 +309,7 @@ function _round(gameid)
 	games[gameid].round_no++;
 	games[gameid].czar_idx = (games[gameid].czar_idx + 1) % games[gameid].players.length;
 	games[gameid].round_stage = 0;
+	games[gameid].hasPlayed = {};
 	games[gameid].picks = {};
 
 	global.client.send(games[gameid].settings.channel, util.format(
@@ -306,7 +333,7 @@ function _check_all_played(gameid)
 {
 	var tmp = games[gameid].players;
 
-	_.each(games[gameid].picks, function(_trash, player) {
+	_.each(games[gameid].hasPlayed, function(_trash, player) {
 		tmp = _.without(tmp, player);
 	});
 	tmp = _.without(tmp, games[gameid].players[games[gameid].czar_idx]);
@@ -315,9 +342,11 @@ function _check_all_played(gameid)
 		games[gameid].pick_order = _.shuffle(_.without(games[gameid].players, games[gameid].players[games[gameid].czar_idx]));
 		global.client.send(games[gameid].settings.channel, "Everyone has played. Here are the entries:");
 		_.each(games[gameid].pick_order, function(player, i) {
-			global.client.send(games[gameid].settings.channel, util.format(
-				"%d: %s", i+1, _format_card(games[gameid].q_card, games[gameid].picks[player])
-			));
+			if (games[gameid].picks[player]) {
+				global.client.send(games[gameid].settings.channel, util.format(
+					"%d: %s", i+1, _format_card(games[gameid].q_card, games[gameid].picks[player])
+				));
+			}
 		});
 		games[gameid].round_stage = 1;
 		global.client.send(games[gameid].settings.channel, util.format("%s: select the winner using !pick", games[gameid].players[games[gameid].czar_idx]));
@@ -469,6 +498,13 @@ function cmd_pick(evt, args) {
 	game_pick(evt.channel, evt.user, a);
 }
 
+function cmd_swap(evt, args) {
+	if(!games[evt.channel])
+		return;
+
+	swap_cards(evt.channel, evt.user);
+}
+
 function cmd_points(evt, args) {
 	if(!games[evt.channel])
 		return;
@@ -485,6 +521,7 @@ exports.setup = function() {
 	global.commands["status"] = cmd_status;
 	global.commands["pick"] = cmd_pick;
 	global.commands["points"] = cmd_points;
+	global.commands["swap"] = cmd_swap;
 
 	cards.setup();
 };
