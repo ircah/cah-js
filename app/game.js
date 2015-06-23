@@ -34,7 +34,7 @@ function start_game(gameid, settings) {
 		"Starting a new game of %sCards Against Humanity%s. The game will start in %d seconds, type !join to join.",
 		global.client.format.bold,
 		global.client.format.bold,
-		INITIAL_WAIT_SEC
+		INITIAL_WAIT_SECS
 	));
 }
 
