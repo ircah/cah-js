@@ -259,6 +259,25 @@ function game_swap_cards(gameid, user) {
 		user,
 		--games[gameid].points[user]
 	));
+	_check_all_played(gameid);
+}
+
+function game_force_pass(gameid, user)
+{
+	if(!games[gameid].roundRunning)
+		return;
+	if(_.indexOf(games[gameid].players, user) == -1)
+		return;
+	if(_.indexOf(games[gameid].players, user) == games[gameid].czar_idx)
+		return;
+
+	games[gameid].hasPlayed[user] = 2; // just pretend they swapped
+	_check_all_played(gameid);
+}
+
+function game_force_leave(gameid, user)
+{
+	leave_game(gameid, user);
 }
 
 /* "internal" game functions */
@@ -377,7 +396,7 @@ function _check_all_played(gameid)
 			));
 		});
 		games[gameid].round_stage = 1;
-		global.client.send(games[gameid].settings.channel, util.format("%s: select the winner using !pick", games[gameid].players[games[gameid].czar_idx]));
+		global.client.send(games[gameid].settings.channel, util.format("%s: Select the winner using !pick", games[gameid].players[games[gameid].czar_idx]));
 	}
 }
 
@@ -600,8 +619,25 @@ function cmd_swap(evt, args) {
 	game_swap_cards(evt.channel, evt.user);
 }
 
+function cmd_fpass(evt, args) {
+	if(!games[evt.channel])
+		return;
+	if(!evt.has_op)
+		return;
+	game_force_pass(evt.channel, args.trim());
+}
+
+function cmd_fleave(evt, args) {
+	if(!games[evt.channel])
+		return;
+	if(!evt.has_op)
+		return;
+	game_force_leave(evt.channel, args);
+}
+
 
 exports.setup = function() {
+	// Normal commands
 	global.commands["start"] = cmd_start;
 	global.commands["stop"] = cmd_stop;
 	global.commands["join"] = cmd_join;
@@ -612,6 +648,9 @@ exports.setup = function() {
 	global.commands["pick"] = cmd_pick;
 	global.commands["points"] = cmd_points;
 	global.commands["swap"] = cmd_swap;
+	// Admin commands
+	global.commands["fpass"] = cmd_fpass;
+	global.commands["fleave"] = cmd_fleave;
 
 	cards.setup();
 };
