@@ -42,6 +42,8 @@ function stop_game(gameid, user) {
 	if(user && games[gameid].settings.starter != user)
 		return;
 	global.client.send(games[gameid].settings.channel, "Game stopped.");
+	if(global.config.voice_players)
+		_.each(games[gameid].players, function(a) { ircDevoice(global.client, games[gameid].settings.channel, [a]); });
 
 	if(games[gameid].timer_start)
 		clearTimeout(games[gameid].timer_start);
@@ -60,6 +62,8 @@ function join_game(gameid, user)
 	games[gameid].points[user] = 0;
 	games[gameid].hasPlayed[user] = 3;
 	global.client.send(games[gameid].settings.channel, user + " joined the game.");
+	if(global.config.voice_players)
+		ircVoice(global.client, games[gameid].settings.channel, [user]);
 	if(games[gameid].players.length >= 3 && !games[gameid].roundRunning) {
 		_start_game(gameid);
 	}
@@ -70,6 +74,8 @@ function leave_game(gameid, user)
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
 	global.client.send(games[gameid].settings.channel, user + " left the game.");
+	if(global.config.voice_players)
+		ircDevoice(global.client, games[gameid].settings.channel, [user]);
 	if(games[gameid].roundRunning && _.indexOf(games[gameid].players, user) == games[gameid].czar_idx) {
 		clearTimeout(games[gameid].timer_round);
 		global.client.send(games[gameid].settings.channel, "Looks like the czar left, nobody wins this round.");
@@ -457,6 +463,38 @@ function parseIntEx(str) { // A better parseInt
 	if(isNaN(n))
 		throw "parseInt() failed.";
 	return n;
+}
+
+function _ircModeStr(mode, nicks) {
+	var modestr = mode.slice(0, 1);
+	_.each(nicks, function() { modestr += mode.slice(1); });
+	return modestr + " " + nicks.join(" ");
+}
+
+function ircVoice(client, channel, nicklist) {
+	var tmp = [];
+	_.each(nicklist, function(nick) {
+		tmp.push(nick);
+		if(tmp.length == 4) {
+			client.mode(channel, _ircModeStr("+v", tmp));
+			tmp = [];
+		}
+	});
+	if(tmp.length > 0)
+		client.mode(channel, _ircModeStr("+v", tmp));
+}
+
+function ircDevoice(client, channel, nicklist) {
+	var tmp = [];
+	_.each(nicklist, function(nick) {
+		tmp.push(nick);
+		if(tmp.length == 4) {
+			client.mode(channel, _ircModeStr("-v", tmp));
+			tmp = [];
+		}
+	});
+	if(tmp.length > 0)
+		client.mode(channel, _ircModeStr("-v", tmp));
 }
 
 /* commands */

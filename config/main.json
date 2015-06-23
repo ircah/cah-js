@@ -14,6 +14,7 @@
 		"throttling": 500
 	},
 	"channels": ["##ircah-dev"],
+	"voice_players": true,
 	"collections": {
 		"base": ["base_set"],
 		"extended": ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion"]
