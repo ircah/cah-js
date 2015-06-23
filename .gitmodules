@@ -1,0 +1,3 @@
+[submodule "config/sets/irc-against-humanity"]
+	path = config/sets/irc-against-humanity
+	url = git@github.com:ircah/irc-against-humanity.git
