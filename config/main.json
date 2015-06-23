@@ -11,7 +11,7 @@
 			"username": "",
 			"password": ""
 		},
-		"throttling": 100
+		"throttling": 500
 	},
 	"channels": ["##ircah-dev"],
 	"collections": {
