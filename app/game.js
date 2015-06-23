@@ -33,7 +33,7 @@ function start_game(gameid, settings) {
 	global.client.send(settings.channel, util.format(
 		"Starting a new game of %sCards Against Humanity%s. The game will start in %d seconds, type !join to join.",
 		global.client.format.bold,
-		global.client.format.reset,
+		global.client.format.bold,
 		INITIAL_WAIT_SEC
 	));
 }
@@ -102,14 +102,14 @@ function game_show_status(gameid)
 		global.client.send(games[gameid].settings.channel, util.format(
 			"%sStatus:%s No round running.",
 			global.client.format.bold,
-			global.client.format.reset
+			global.client.format.bold
 		));
 		return;
 	} else if(games[gameid].round_stage == 1) {
 		global.client.send(games[gameid].settings.channel, util.format(
 			"%sStatus:%s Waiting for %s to pick a winner.",
 			global.client.format.bold,
-			global.client.format.reset,
+			global.client.format.bold,
 			games[gameid].players[games[gameid].czar_idx]
 		));
 		return;
@@ -124,7 +124,7 @@ function game_show_status(gameid)
 	global.client.send(games[gameid].settings.channel, util.format(
 		"%sStatus:%s %s is the card czar. Waiting for players to play: %s",
 		global.client.format.bold,
-		global.client.format.reset,
+		global.client.format.bold,
 		games[gameid].players[games[gameid].czar_idx],
 		tmp.join(", ")
 	));
@@ -154,7 +154,7 @@ function game_pick(gameid, user, cards)
 			global.client.send(games[gameid].settings.channel, util.format(
 				"%sWinner is:%s %s with \"%s\", gets one awesome point and has %d awesome points!",
 				global.client.format.bold,
-				global.client.format.reset,
+				global.client.format.bold,
 				winner,
 				_format_card(games[gameid].q_card, games[gameid].picks[winner]),
 				++games[gameid].points[winner]
@@ -259,10 +259,10 @@ function game_swap_cards(gameid, user) {
 function _format_card(card, values)
 {
 	if(!values) {
-		return card.text.replace(/%s/g, client.format.bold + "____" + client.format.reset);
+		return card.text.replace(/%s/g, client.format.bold + "____" + client.format.bold);
 	} else {
 		var vals = _.map(values, function(text) {
-			return global.client.format.bold + text + global.client.format.reset;
+			return global.client.format.bold + text + global.client.format.bold;
 		});
 		if(card.text.indexOf("%s") == -1)
 			return card.text + " " + vals.join(" ");
@@ -314,7 +314,7 @@ function _notice_cards(gameid, pl)
 			return;
 		var cards = [];
 		_.each(games[gameid].cards[pl], function(card, i) {
-			cards.push(util.format("%s[%d]%s %s", client.format.bold, i+1, client.format.reset, card));
+			cards.push(util.format("%s[%d]%s %s", client.format.bold, i+1, client.format.bold, card));
 		});
 		if (cards.length > 0)
 			global.client.notice(pl, "Your cards: " + cards.join(" "));
@@ -338,7 +338,7 @@ function _round(gameid)
 		games[gameid].players[games[gameid].czar_idx]
 	));
 	games[gameid].q_card = cards.randomQuestionCard(games[gameid].settings.coll);
-	global.client.send(games[gameid].settings.channel, client.format.bold + "CARD: " + client.format.reset + _format_card(games[gameid].q_card));
+	global.client.send(games[gameid].settings.channel, client.format.bold + "CARD: " + client.format.bold + _format_card(games[gameid].q_card));
 	_refill_cards(gameid);
 	_notice_cards(gameid);
 	games[gameid].roundRunning = true;
