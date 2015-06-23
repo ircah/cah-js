@@ -22,6 +22,8 @@ exports.setup = function() {
 		evt2.user = evt.user.getNick();
 		evt2.channel = evt.channel.getName();
 		evt2.reply = function(a) { return evt.reply(a); }
+		evt2.has_op = (evt.channel.names[evt.user.getNick()] == "@");
+		evt2.has_voice = (evt.channel.names[evt.user.getNick()] == "+");
 		commands.handle(evt2, evt.message);
 	});
 

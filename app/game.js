@@ -40,7 +40,7 @@ function start_game(gameid, settings) {
 
 function stop_game(gameid, user) {
 	if(user && games[gameid].settings.starter != user)
-		return;
+		return false;
 	global.client.send(games[gameid].settings.channel, "Game stopped.");
 	if(global.config.voice_players)
 		ircDevoice(global.client, games[gameid].settings.channel, games[gameid].players);
@@ -52,6 +52,7 @@ function stop_game(gameid, user) {
 	if(games[gameid].timer_round)
 		clearTimeout(games[gameid].timer_round);
 	games[gameid] = undefined;
+	return true;
 }
 
 function join_game(gameid, user)
@@ -534,7 +535,13 @@ function cmd_start(evt, args) {
 function cmd_stop(evt, args) {
 	if(!games[evt.channel])
 		return evt.reply("No game running, start one with !start.");
-	stop_game(evt.channel);
+	if(evt.has_op) {
+		stop_game(evt.channel); // not passing user stops the game unconditionally
+	} else {
+		if(!stop_game(evt.channel, evt.user)) {
+			evt.reply("You can't stop the game.");
+		}
+	}
 }
 
 function cmd_join(evt, args) {
