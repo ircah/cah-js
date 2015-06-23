@@ -254,7 +254,7 @@ function game_swap_cards(gameid, user) {
 	_refill_cards(gameid, user);
 	_notice_cards(gameid, user);
 	global.client.send(games[gameid].settings.channel, util.format(
-		"%s swapped all of their cards. They don't play this round and lose a awesome point. %s now has %d awesome points.",
+		"%s swapped all of their cards. They don't play this round and lose a point. %s now has %d awesome points.",
 		user,
 		user,
 		--games[gameid].points[user]
@@ -301,8 +301,13 @@ function _check_players(gameid)
 {
 	if(games[gameid].players.length >= 3)
 		return true;
+	if(games[gameid].timer_start)
+		return true; // Don't complain about lack of users if initial period not elapsed yet
+	if(games[gameid].timer_stop)
+		return false; // Don't complain twice
 	games[gameid].roundRunning = false;
-	clearTimeout(games[gameid].timer_round);
+	if(games[gameid].timer_round)
+		clearTimeout(games[gameid].timer_round);
 	global.client.send(games[gameid].settings.channel, util.format("Not enough players to play (need at least 3). Stopping in %d minutes if not enough players.", NOT_ENOUGH_PLAYERS_WAIT_MINS));
 	games[gameid].timer_stop = setTimeout(function() { timer_stop(gameid); }, NOT_ENOUGH_PLAYERS_WAIT_MINS * 60 * 1000);
 	return false;
