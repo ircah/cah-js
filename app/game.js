@@ -20,7 +20,7 @@ function start_game(gameid, settings) {
 	games[gameid].pick_order = [];
 	games[gameid].timer_start = setTimeout(function() { timer_start(gameid); }, INITIAL_WAIT_SECS * 1000);
 	games[gameid].timer_stop = null;
-	games[gameid].timer_round = null;
+	games[gameid].timer_round = null; // used as "is_round_running" in the code; if this is not null a round is running
 	games[gameid].round_no = 0; // incremented to 1 in _round()
 	games[gameid].czar_idx = -1;
 	games[gameid].q_card = null;
@@ -77,6 +77,8 @@ function game_get_players(gameid)
 
 function game_notice_cards(gameid, user)
 {
+	if(!games[gameid].timer_round)
+		return;
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
 	if(_.indexOf(games[gameid].players, user) == games[gameid].czar_idx)
@@ -86,7 +88,15 @@ function game_notice_cards(gameid, user)
 
 function game_show_status(gameid)
 {
-	if(games[gameid].round_stage == 1) {
+	if(!games[gameid].timer_round)
+	{
+		global.client.send(games[gameid].settings.channel, util.format(
+			"%sStatus:%s No round running.",
+			global.client.format.bold,
+			global.client.format.reset
+		));
+		return;
+	} else if(games[gameid].round_stage == 1) {
 		global.client.send(games[gameid].settings.channel, util.format(
 			"%sStatus:%s Waiting for %s to pick a winner.",
 			global.client.format.bold,
@@ -113,6 +123,8 @@ function game_show_status(gameid)
 
 function game_pick(gameid, user, cards)
 {
+	if(!games[gameid].timer_round)
+		return;
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
 	if(_.indexOf(games[gameid].players, user) == games[gameid].czar_idx) {
@@ -221,6 +233,7 @@ function _check_players(gameid)
 {
 	if(games[gameid].players.length >= 3)
 		return true;
+	clearTimeout(games[gameid].timer_round);
 	global.client.send(games[gameid].settings.channel, util.format("Not enough players to play (need at least 3). Stopping in %d minutes if not enough players.", NOT_ENOUGH_PLAYERS_WAIT_MINS));
 	games[gameid].timer_stop = setTimeout(function() { timer_stop(gameid); }, NOT_ENOUGH_PLAYERS_WAIT_MINS * 60 * 1000);
 	return false;
