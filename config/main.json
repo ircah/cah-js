@@ -15,8 +15,9 @@
 	},
 	"channels": ["##ircah-dev"],
 	"collections": {
-		"default": ["base_set"]
+		"base": ["base_set"],
+		"extended": ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion"]
 	},
-	"default_collection": "default",
+	"default_collection": "extended",
 	"default_point_limit": 7
 }
