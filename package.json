@@ -7,7 +7,7 @@
   "license": "MIT",
   "dependencies": {
     "underscore": "latest",
-    "coffea" : "git://github.com/caffeinery/coffea.git"
+    "coffea": "git://github.com/caffeinery/coffea.git"
   },
   "devDependencies": {
   }
