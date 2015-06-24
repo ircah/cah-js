@@ -83,7 +83,9 @@ function leave_game(gameid, user)
 		_round(gameid);
 	}
 	games[gameid].players = _.without(games[gameid].players, user);
-	_check_players(gameid, user);
+	// If there are still enough players re-check whether everyone has played
+	if(_check_players(gameid, user))
+		_check_all_played(gameid);
 }
 
 function game_get_players(gameid)
