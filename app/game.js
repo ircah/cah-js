@@ -77,15 +77,21 @@ function leave_game(gameid, user)
 	global.client.send(games[gameid].settings.channel, user + " left the game.");
 	if(global.config.voice_players)
 		ircDevoice(global.client, games[gameid].settings.channel, [user]);
-	if(games[gameid].roundRunning && _.indexOf(games[gameid].players, user) == games[gameid].czar_idx) {
-		clearTimeout(games[gameid].timer_round);
-		global.client.send(games[gameid].settings.channel, "Looks like the czar left, nobody wins this round.");
-		_round(gameid);
-	}
+	var oldidx = _.indexOf(games[gameid].players, user);
 	games[gameid].players = _.without(games[gameid].players, user);
-	// If there are still enough players re-check whether everyone has played
-	if(_check_players(gameid, user))
-		_check_all_played(gameid);
+	if(!_check_players(gameid, user))
+		return;
+	if(games[gameid].roundRunning) {
+		// Abort the round if the czar left, otherwise check whether everyone has played
+		//  (now that a person has left)
+		if(oldidx == games[gameid].czar_idx) {
+			clearTimeout(games[gameid].timer_round);
+			global.client.send(games[gameid].settings.channel, "Looks like the czar left, nobody wins this round.");
+			_round(gameid);
+		} else {
+			_check_all_played(gameid);
+		}
+	}
 }
 
 function game_get_players(gameid)
