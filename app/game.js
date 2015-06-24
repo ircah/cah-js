@@ -239,9 +239,9 @@ function game_swap_cards(gameid, user) {
 		return;
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
-	if (games[gameid].players.length < SWAP_MIN_PLAYERS) {
+	if(games[gameid].players.length < SWAP_MIN_PLAYERS) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: There must be at least %d players to use !swap.", user, SWAP_MIN_PLAYERS));
-	} else if (games[gameid].hasPlayed[user] != 0) {
+	} else if(games[gameid].hasPlayed[user]) {
 		var tmp;
 		if(games[gameid].hasPlayed[user] == 1)
 			tmp = "already picked";
@@ -250,9 +250,9 @@ function game_swap_cards(gameid, user) {
 		else if(games[gameid].hasPlayed[user] == 3)
 			tmp = "just joined";
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, tmp));
-	} else if (_.indexOf(games[gameid].players, user) == games[gameid].czar_idx) {
+	} else if(_.indexOf(games[gameid].players, user) == games[gameid].czar_idx) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You can't swap your cards because you're the card czar.", user));
-	} else if (games[gameid].points[user] == 0) {
+	} else if(games[gameid].points[user] == 0) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You need at least one awesome point to use !swap.", user));
 	}
 	// Remove cards from the player and give them new ones.
