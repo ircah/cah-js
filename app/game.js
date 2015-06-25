@@ -16,6 +16,7 @@ function start_game(gameid, settings) {
 	games[gameid] = {};
 	games[gameid].settings = settings;
 	games[gameid].players = [];
+	games[gameid].czar = null;
 	games[gameid].cards = {};
 	games[gameid].picks = {};
 	games[gameid].hasPlayed = {}; // 1 -> player played, 2 -> player swapped, 3 -> player just joined and can't play
@@ -25,7 +26,6 @@ function start_game(gameid, settings) {
 	games[gameid].timer_round = null;
 	games[gameid].roundRunning = false;
 	games[gameid].round_no = 0; // incremented to 1 in _round()
-	games[gameid].czar_idx = -1;
 	games[gameid].q_card = null;
 	games[gameid].round_stage = 0; // 0 -> waiting for players to play, 1 -> waiting for czar to pick winner
 	games[gameid].points = {};
@@ -77,14 +77,13 @@ function leave_game(gameid, user)
 	global.client.send(games[gameid].settings.channel, user + " left the game.");
 	if(global.config.voice_players)
 		ircDevoice(global.client, games[gameid].settings.channel, [user]);
-	var oldidx = _.indexOf(games[gameid].players, user);
 	games[gameid].players = _.without(games[gameid].players, user);
 	if(!_check_players(gameid, user))
 		return;
 	if(games[gameid].roundRunning) {
 		// Abort the round if the czar left, otherwise check whether everyone has played
 		//  (now that a person has left)
-		if(oldidx == games[gameid].czar_idx) {
+		if(user == games[gameid].czar) {
 			clearTimeout(games[gameid].timer_round);
 			global.client.send(games[gameid].settings.channel, "Looks like the czar left, nobody wins this round.");
 			_round(gameid);
@@ -105,7 +104,7 @@ function game_notice_cards(gameid, user)
 		return;
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
-	if(_.indexOf(games[gameid].players, user) == games[gameid].czar_idx)
+	if(user == games[gameid].czar)
 		return;
 	_notice_cards(gameid, user);
 }
@@ -125,7 +124,7 @@ function game_show_status(gameid)
 			"%sStatus:%s Waiting for %s to pick a winner.",
 			global.client.format.bold,
 			global.client.format.bold,
-			games[gameid].players[games[gameid].czar_idx]
+			games[gameid].czar
 		));
 		return;
 	}
@@ -134,13 +133,13 @@ function game_show_status(gameid)
 	_.each(games[gameid].hasPlayed, function(_trash, player) {
 		tmp = _.without(tmp, player);
 	});
-	tmp = _.without(tmp, games[gameid].players[games[gameid].czar_idx]);
+	tmp = _.without(tmp, games[gameid].czar);
 
 	global.client.send(games[gameid].settings.channel, util.format(
 		"%sStatus:%s %s is the card czar. Waiting for players to play: %s",
 		global.client.format.bold,
 		global.client.format.bold,
-		games[gameid].players[games[gameid].czar_idx],
+		games[gameid].czar,
 		tmp.join(", ")
 	));
 }
@@ -151,7 +150,7 @@ function game_pick(gameid, user, cards)
 		return;
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
-	if(_.indexOf(games[gameid].players, user) == games[gameid].czar_idx) {
+	if(user == games[gameid].czar) {
 		if(games[gameid].round_stage == 0) {
 			global.client.send(games[gameid].settings.channel, util.format("%s: The czar does not play (yet).", user));
 		} else {
@@ -239,7 +238,9 @@ function game_swap_cards(gameid, user) {
 		return;
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
-	if(games[gameid].players.length < SWAP_MIN_PLAYERS) {
+	if(user == games[gameid].czar) {
+		return global.client.send(games[gameid].settings.channel, util.format("%s: You can't swap your cards because you're the card czar.", user));
+	} else if(games[gameid].players.length < SWAP_MIN_PLAYERS) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: There must be at least %d players to use !swap.", user, SWAP_MIN_PLAYERS));
 	} else if(games[gameid].hasPlayed[user]) {
 		var tmp;
@@ -250,8 +251,6 @@ function game_swap_cards(gameid, user) {
 		else if(games[gameid].hasPlayed[user] == 3)
 			tmp = "just joined";
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, tmp));
-	} else if(_.indexOf(games[gameid].players, user) == games[gameid].czar_idx) {
-		return global.client.send(games[gameid].settings.channel, util.format("%s: You can't swap your cards because you're the card czar.", user));
 	} else if(games[gameid].points[user] == 0) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You need at least one awesome point to use !swap.", user));
 	}
@@ -275,7 +274,7 @@ function game_force_pass(gameid, user)
 		return;
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
-	if(_.indexOf(games[gameid].players, user) == games[gameid].czar_idx)
+	if(user == games[gameid].czar)
 		return;
 
 	games[gameid].hasPlayed[user] = 2; // just pretend they swapped
@@ -343,7 +342,7 @@ function _notice_cards(gameid, pl)
 {
 	if(!pl) {
 		_.each(games[gameid].players, function(pl) {
-			if(_.indexOf(games[gameid].players, pl) == games[gameid].czar_idx)
+			if(pl == games[gameid].czar)
 				return;
 			_notice_cards(gameid, pl);
 		});
@@ -364,8 +363,14 @@ function _notice_cards(gameid, pl)
 
 function _round(gameid)
 {
+	var tmp;
+
 	games[gameid].round_no++;
-	games[gameid].czar_idx = (games[gameid].czar_idx + 1) % games[gameid].players.length;
+	if(_.indexOf(games[gameid].players, games[gameid].czar) == -1)
+		tmp = 0;
+	else
+		tmp = (_.indexOf(games[gameid].players, games[gameid].czar) + 1) % games[gameid].players.length;
+	games[gameid].czar = games[gameid].players[tmp];
 	games[gameid].round_stage = 0;
 	games[gameid].hasPlayed = {};
 	games[gameid].picks = {};
@@ -373,7 +378,7 @@ function _round(gameid)
 	global.client.send(games[gameid].settings.channel, util.format(
 		"Round %d! %s is the card czar.",
 		games[gameid].round_no,
-		games[gameid].players[games[gameid].czar_idx]
+		games[gameid].czar
 	));
 	games[gameid].q_card = cards.randomQuestionCard(games[gameid].settings.coll);
 	global.client.send(games[gameid].settings.channel, client.format.bold + "CARD: " + client.format.bold + _format_card(games[gameid].q_card));
@@ -390,11 +395,11 @@ function _check_all_played(gameid)
 	_.each(games[gameid].hasPlayed, function(_trash, player) {
 		tmp = _.without(tmp, player);
 	});
-	tmp = _.without(tmp, games[gameid].players[games[gameid].czar_idx]);
+	tmp = _.without(tmp, games[gameid].czar);
 
 	if(tmp.length == 0) {
 		var tmp = games[gameid].players;
-		tmp = _.without(tmp, games[gameid].players[games[gameid].czar_idx]);
+		tmp = _.without(tmp, games[gameid].czar);
 		_.each(games[gameid].hasPlayed, function(a, pl) {
 			if(a == 2 || a == 3) { // player swapped or joined new
 				tmp = _.without(tmp, pl);
@@ -408,7 +413,7 @@ function _check_all_played(gameid)
 			));
 		});
 		games[gameid].round_stage = 1;
-		global.client.send(games[gameid].settings.channel, util.format("%s: Select the winner using !pick", games[gameid].players[games[gameid].czar_idx]));
+		global.client.send(games[gameid].settings.channel, util.format("%s: Select the winner using !pick", games[gameid].czar));
 	}
 }
 
@@ -654,7 +659,7 @@ function cmd_fleave(evt, args) {
 		return;
 	if(!evt.has_op)
 		return;
-	game_force_leave(evt.channel, args);
+	game_force_leave(evt.channel, args.trim());
 }
 
 
