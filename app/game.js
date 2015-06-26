@@ -233,11 +233,11 @@ function game_show_points(gameid)
 		out += o.name + ", ";
 	});
 	out = out.slice(0, -2) + " (" + prev_pts + " awesome points)";
-	global.client.send(games[gameid].settings.channel, utils.format(
+	global.client.send(games[gameid].settings.channel, util.format(
 		"Point limit is %s%d%s, the most horrible people: %s",
-		client.format.bold,
+		global.client.format.bold,
 		games[gameid].settings.plimit,
-		client.format.bold,
+		global.client.format.bold,
 		out
 	));
 }
