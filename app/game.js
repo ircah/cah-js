@@ -5,7 +5,7 @@ var cards = require('./cards.js');
 var games = {};
 
 // should this be in the config?
-var INITIAL_WAIT_SECS = 30;
+var INITIAL_WAIT_SECS = 60;
 var NOT_ENOUGH_PLAYERS_WAIT_MINS = 2;
 var ROUND_MAX_TIME_MINS = 4;
 var SWAP_MIN_PLAYERS = 5;
