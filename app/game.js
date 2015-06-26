@@ -210,15 +210,27 @@ function game_pick(gameid, user, cards)
 	}
 }
 
-function game_show_points(gameid)
+function game_show_points(gameid, show_all)
 {
-	var tmp;
+	var tmp = {};
 	var out = "";
 	var prev_pts = -1;
 
-	tmp = _.map(games[gameid].points, function(pts, pl) {
-		return {name: pl, points: pts};
-	});
+	if (!show_all) {
+		_.each(games[gameid].points, function(_trash, player) {
+			if (games[gameid].players.indexOf(player) !== -1) {
+				tmp[player] = games[gameid].points[player];
+			}
+		});
+
+		tmp = _.map(tmp, function(pts, pl) {
+			return {name: pl, points: pts};
+		});
+	} else {
+		tmp = _.map(games[gameid].points, function(pts, pl) {
+			return {name: pl, points: pts};
+		});
+	}
 	tmp = _.sortBy(tmp, function(a) {
 		return -a.points;
 	});
@@ -235,7 +247,7 @@ function game_show_points(gameid)
 	out = out.slice(0, -2) + " (" + prev_pts + " awesome points)";
 
 	global.client.send(games[gameid].settings.channel, util.format(
-		"Point limit is %s%d%s, the most horrible people: %s",
+		"Point limit is %s%d%s. The most horrible people: %s",
 		global.client.format.bold,
 		games[gameid].settings.plimit,
 		global.client.format.bold,
@@ -291,6 +303,17 @@ function game_force_pass(gameid, user)
 
 	games[gameid].hasPlayed[user] = 4;
 	_check_all_played(gameid);
+}
+
+function game_last_round(gameid, round_no)
+{
+	if (round_no) {
+		games[gameid].last_round = round_no;
+	} else {
+		games[gameid].last_round = games[gameid].round_no;
+	}
+
+	global.client.send(games[gameid].settings.channel, util.format("The game will stop at the end of round %d.", games[gameid].last_round));
 }
 
 function game_force_leave(gameid, user)
@@ -377,6 +400,38 @@ function _round(gameid)
 {
 	var tmp;
 
+	if (games[gameid].last_round === games[gameid].round_no) {
+		var won = [];
+
+		tmp = _.map(games[gameid].points, function(pts, pl) {
+			return {name: pl, points: pts};
+		});
+		tmp = _.sortBy(tmp, function(a) {
+			return -a.points;
+		});
+
+		_.each(tmp, function (p) {
+			if (p.points === tmp[0].points) {
+				won.push(p.name);
+			}
+		});
+
+		if (won.length === 1) {
+			global.client.send(games[gameid].settings.channel, util.format(
+				"Sorry to ruin the fun, but that was the last round of the game! %s was the winner with %d points!",
+				won[0], tmp[0].points
+			));
+		} else {
+			global.client.send(games[gameid].settings.channel, util.format(
+				"Sorry to ruin the fun, but that was the last round of the game! %s were the winners with %d points each!",
+				won.join(", "), tmp[0].points
+			));
+		}
+
+		game_show_points(gameid, true);
+		return stop_game(gameid);
+	}
+
 	games[gameid].round_no++;
 	if(_.indexOf(games[gameid].players, games[gameid].czar) == -1)
 		tmp = 0;
@@ -443,7 +498,7 @@ function _check_plimit(gameid)
 				pl,
 				games[gameid].settings.plimit
 			));
-			game_show_points(gameid);
+			game_show_points(gameid, true);
 			stop_game(gameid);
 			r = true;
 		}
@@ -686,6 +741,25 @@ function cmd_fpass(evt, args) {
 	game_force_pass(evt.channel, args.trim());
 }
 
+function cmd_flastround(evt, args) {
+	if(!games[evt.channel])
+		return;
+	if(!evt.has_op)
+		return;
+
+	var a = null;
+
+	_.each(args, function(arg) {
+		if(arg.match(/^\d+$/)) { // numeric arg -> point limit
+			try {
+				a = parseIntEx(arg);
+			} catch(e) {};
+		}
+	});
+
+	game_last_round(evt.channel, a);
+}
+
 function cmd_fleave(evt, args) {
 	if(!games[evt.channel])
 		return;
@@ -715,6 +789,7 @@ exports.setup = function() {
 	global.commands["pts"] = cmd_points;
 	// Admin commands
 	global.commands["fpass"] = cmd_fpass;
+	global.commands["flastround"] = cmd_flastround;
 	global.commands["fleave"] = cmd_fleave;
 
 	cards.setup();
