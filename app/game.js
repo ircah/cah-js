@@ -189,6 +189,8 @@ function game_pick(gameid, user, cards)
 			return global.client.send(games[gameid].settings.channel, "You swapped this round and can't play.");
 		else if(games[gameid].hasPlayed[user] == 3)
 			return global.client.send(games[gameid].settings.channel, "You joined this round, you'll get to play next round.");
+		else if(games[gameid].hasPlayed[user] == 4)
+			return global.client.send(games[gameid].settings.channel, "You can't play this round.");
 		if(cards.length != games[gameid].q_card.pick)
 			return global.client.send(games[gameid].settings.channel, util.format("You need to pick %d cards.", games[gameid].q_card.pick));
 		if(cards.length != _.uniq(cards).length)
@@ -252,7 +254,7 @@ function game_swap_cards(gameid, user) {
 		else if(games[gameid].hasPlayed[user] == 3)
 			tmp = "just joined";
 		else if(games[gameid].hasPlayed[user] == 4)
-			tmp = "did something";
+			tmp = "can't play";
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, tmp));
 	} else if(games[gameid].points[user] == 0) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You need at least one awesome point to use !swap.", user));
