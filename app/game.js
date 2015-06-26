@@ -12,7 +12,7 @@ var SWAP_MIN_PLAYERS = 5;
 
 /* "external" game functions */
 
-function start_game(gameid, settings, user_is_op) {
+function start_game(gameid, settings) {
 	games[gameid] = {};
 	games[gameid].settings = settings;
 	games[gameid].players = [];
@@ -29,6 +29,7 @@ function start_game(gameid, settings, user_is_op) {
 	games[gameid].q_card = null;
 	games[gameid].round_stage = 0; // 0 -> waiting for players to play, 1 -> waiting for czar to pick winner
 	games[gameid].points = {};
+	games[gameid].last_round = -1; // if game reaches this round no. it will end
 
 	global.client.send(settings.channel, util.format(
 		"Starting a new game of %sCards Against Humanity%s. The game will start in %d seconds, type !join to join.",
@@ -212,25 +213,22 @@ function game_pick(gameid, user, cards)
 
 function game_show_points(gameid, show_all)
 {
-	var tmp = {};
+	var tmp;
 	var out = "";
 	var prev_pts = -1;
 
-	if (!show_all) {
-		_.each(games[gameid].points, function(_trash, player) {
-			if (games[gameid].players.indexOf(player) !== -1) {
-				tmp[player] = games[gameid].points[player];
-			}
-		});
-
-		tmp = _.map(tmp, function(pts, pl) {
-			return {name: pl, points: pts};
-		});
+	if (show_all) {
+		tmp = games[gameid].points;
 	} else {
-		tmp = _.map(games[gameid].points, function(pts, pl) {
-			return {name: pl, points: pts};
+		tmp = {};
+		_.each(games[gameid].points, function(_trash, player) {
+			if(_.indexOf(games[gameid].players, player) != -1)
+				tmp[player] = games[gameid].points[player];
 		});
 	}
+	tmp = _.map(tmp, function(pts, pl) {
+		return {name: pl, points: pts};
+	});
 	tmp = _.sortBy(tmp, function(a) {
 		return -a.points;
 	});
@@ -307,11 +305,10 @@ function game_force_pass(gameid, user)
 
 function game_last_round(gameid, round_no)
 {
-	if (round_no) {
+	if (round_no)
 		games[gameid].last_round = round_no;
-	} else {
+	else
 		games[gameid].last_round = games[gameid].round_no;
-	}
 
 	global.client.send(games[gameid].settings.channel, util.format("The game will stop at the end of round %d.", games[gameid].last_round));
 }
@@ -400,38 +397,6 @@ function _round(gameid)
 {
 	var tmp;
 
-	if (games[gameid].last_round === games[gameid].round_no) {
-		var won = [];
-
-		tmp = _.map(games[gameid].points, function(pts, pl) {
-			return {name: pl, points: pts};
-		});
-		tmp = _.sortBy(tmp, function(a) {
-			return -a.points;
-		});
-
-		_.each(tmp, function (p) {
-			if (p.points === tmp[0].points) {
-				won.push(p.name);
-			}
-		});
-
-		if (won.length === 1) {
-			global.client.send(games[gameid].settings.channel, util.format(
-				"Sorry to ruin the fun, but that was the last round of the game! %s was the winner with %d points!",
-				won[0], tmp[0].points
-			));
-		} else {
-			global.client.send(games[gameid].settings.channel, util.format(
-				"Sorry to ruin the fun, but that was the last round of the game! %s were the winners with %d points each!",
-				won.join(", "), tmp[0].points
-			));
-		}
-
-		game_show_points(gameid, true);
-		return stop_game(gameid);
-	}
-
 	games[gameid].round_no++;
 	if(_.indexOf(games[gameid].players, games[gameid].czar) == -1)
 		tmp = 0;
@@ -486,6 +451,29 @@ function _check_all_played(gameid)
 
 function _check_plimit(gameid)
 {
+	if(games[gameid].last_round == games[gameid].round_no) {
+		var won = [], tmp;
+
+		// Find out highest score and collect all players with that score
+		tmp = _.max(games[gameid].points);
+		_.each(games[gameid].points, function(pts, pl) {
+			if(pts == tmp) {
+				won.push(pl);
+			}
+		});
+
+		if (won.length == 1)
+			tmp = util.format("%s was the winner with %d points", won[0], tmp);
+		else
+			tmp = util.format("%s were the winners with %d points each", won.join(", "), tmp);
+		global.client.send(games[gameid].settings.channel, util.format(
+			"Sorry to ruin the fun, but that was the last round of the game! %s!",
+			tmp
+		));
+
+		game_show_points(gameid, true);
+		return stop_game(gameid);
+	}
 	if(games[gameid].settings.plimit <= 0)
 		return false;
 	var r = false;
@@ -750,7 +738,7 @@ function cmd_flastround(evt, args) {
 	var a = null;
 
 	_.each(args, function(arg) {
-		if(arg.match(/^\d+$/)) { // numeric arg -> point limit
+		if(arg.match(/^\d+$/)) { // numeric arg -> round number
 			try {
 				a = parseIntEx(arg);
 			} catch(e) {};
