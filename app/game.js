@@ -60,7 +60,7 @@ function join_game(gameid, user)
 	if(_.indexOf(games[gameid].players, user) != -1)
 		return;
 	games[gameid].players.push(user);
-	if(!games[gameid].points[user])
+	if(games[gameid].points[user] === undefined)
 		games[gameid].points[user] = 0;
 	games[gameid].hasPlayed[user] = 3;
 	global.client.send(games[gameid].settings.channel, user + " joined the game.");
