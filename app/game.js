@@ -233,7 +233,7 @@ function game_show_points(gameid)
 		out += o.name + ", ";
 	});
 	out = out.slice(0, -2) + " (" + prev_pts + " awesome points)";
-	global.client.send(games[gameid].settings.channel, "The most horrible people: " + out);
+	global.client.send(games[gameid].settings.channel, utils.format("The point limit is %s%d%sThe most horrible people: %s", client.format.bold, games[gameid].settings.plimit, client.format.bold, out));
 }
 
 function game_swap_cards(gameid, user) {
