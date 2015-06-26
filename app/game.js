@@ -19,7 +19,7 @@ function start_game(gameid, settings) {
 	games[gameid].czar = null;
 	games[gameid].cards = {};
 	games[gameid].picks = {};
-	games[gameid].hasPlayed = {}; // 1 -> player played, 2 -> player swapped, 3 -> player just joined and can't play
+	games[gameid].hasPlayed = {}; // 1 -> player played, 2 -> player swapped, 3 -> player just joined and can't play, 4 -> didn't play cause other reason
 	games[gameid].pick_order = []; // order in which answers were displayed to the czar
 	games[gameid].timer_start = setTimeout(function() { timer_start(gameid); }, INITIAL_WAIT_SECS * 1000);
 	games[gameid].timer_stop = null;
@@ -250,6 +250,8 @@ function game_swap_cards(gameid, user) {
 			tmp = "already swapped";
 		else if(games[gameid].hasPlayed[user] == 3)
 			tmp = "just joined";
+		else if(games[gameid].hasPlayed[user] == 4)
+			tmp = "did something";
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, tmp));
 	} else if(games[gameid].points[user] == 0) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You need at least one awesome point to use !swap.", user));
@@ -277,7 +279,7 @@ function game_force_pass(gameid, user)
 	if(user == games[gameid].czar)
 		return;
 
-	games[gameid].hasPlayed[user] = 2; // just pretend they swapped
+	games[gameid].hasPlayed[user] = 4;
 	_check_all_played(gameid);
 }
 
@@ -401,7 +403,7 @@ function _check_all_played(gameid)
 		var tmp = games[gameid].players;
 		tmp = _.without(tmp, games[gameid].czar);
 		_.each(games[gameid].hasPlayed, function(a, pl) {
-			if(a == 2 || a == 3) { // player swapped or joined new
+			if(a == 2 || a == 3 || a == 4) { // player swapped or joined new
 				tmp = _.without(tmp, pl);
 			}
 		});
@@ -486,7 +488,17 @@ function timer_round(gameid, n) {
 			break;
 		case 3:
 			global.client.send(games[gameid].settings.channel, "Time's up.");
-			_round(gameid); // idk
+			// Directly start a new round unless enough people have picked
+			if(_.size(games[gameid].picks) >= 2) {
+				_.each(games[gameid].players, function(pl) {
+					if(games[gameid].picks[pl])
+						return;
+					games[gameid].hasPlayed[pl] = 4;
+				});
+				_check_all_played(gameid);
+			} else {
+				_round(gameid);
+			}
 			break;
 	}
 }
@@ -675,10 +687,10 @@ exports.setup = function() {
 	global.commands["pick"] = cmd_pick;
 	global.commands["points"] = cmd_points;
 	global.commands["swap"] = cmd_swap;
-	// Aliases.
+	// Aliase
 	global.commands["s"] = cmd_start;
-	global.commands["l"] = cmd_leave;
 	global.commands["j"] = cmd_join;
+	global.commands["l"] = cmd_leave;
 	global.commands["p"] = cmd_pick;
 	global.commands["pts"] = cmd_points;
 	// Admin commands
