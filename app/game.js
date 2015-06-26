@@ -233,7 +233,13 @@ function game_show_points(gameid)
 		out += o.name + ", ";
 	});
 	out = out.slice(0, -2) + " (" + prev_pts + " awesome points)";
-	global.client.send(games[gameid].settings.channel, utils.format("The point limit is %s%d%sThe most horrible people: %s", client.format.bold, games[gameid].settings.plimit, client.format.bold, out));
+	global.client.send(games[gameid].settings.channel, utils.format(
+		"Point limit is %s%d%s, the most horrible people: %s",
+		client.format.bold,
+		games[gameid].settings.plimit,
+		client.format.bold,
+		out
+	));
 }
 
 function game_swap_cards(gameid, user) {
@@ -690,7 +696,7 @@ exports.setup = function() {
 	global.commands["pick"] = cmd_pick;
 	global.commands["points"] = cmd_points;
 	global.commands["swap"] = cmd_swap;
-	// Aliase
+	// Aliases
 	global.commands["s"] = cmd_start;
 	global.commands["j"] = cmd_join;
 	global.commands["l"] = cmd_leave;
