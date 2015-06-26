@@ -12,7 +12,7 @@ var SWAP_MIN_PLAYERS = 5;
 
 /* "external" game functions */
 
-function start_game(gameid, settings) {
+function start_game(gameid, settings, user_is_op) {
 	games[gameid] = {};
 	games[gameid].settings = settings;
 	games[gameid].players = [];
@@ -233,6 +233,7 @@ function game_show_points(gameid)
 		out += o.name + ", ";
 	});
 	out = out.slice(0, -2) + " (" + prev_pts + " awesome points)";
+
 	global.client.send(games[gameid].settings.channel, util.format(
 		"Point limit is %s%d%s, the most horrible people: %s",
 		global.client.format.bold,
@@ -594,6 +595,16 @@ function cmd_start(evt, args) {
 				settings.coll = arg;
 		}
 	});
+
+	if (!config.collections.hasOwnProperty(settings.coll)) {
+		return evt.reply(util.format("Incorrect card collection \"%s\".", settings.coll));
+	}
+
+	if (!evt.is_op && settings.plimit > global.config.max_point_limit) {
+		return evt.reply(util.format("Only admins can start games with a point limit over %d.", global.config.max_point_limit));
+	} else if (!evt.is_op && settings.plimit <= 0) {
+		return evt.reply("Only admins can start unlimited games.");
+	}
 
 	start_game(evt.channel, settings);
 	join_game(evt.channel, evt.user);
