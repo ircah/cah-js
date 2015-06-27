@@ -655,9 +655,9 @@ function cmd_start(evt, args) {
 		return evt.reply(util.format("Incorrect card collection \"%s\".", settings.coll));
 	}
 
-	if (!evt.is_op && settings.plimit > global.config.max_point_limit) {
+	if (!evt.has_op && settings.plimit > global.config.max_point_limit) {
 		return evt.reply(util.format("Only admins can start games with a point limit over %d.", global.config.max_point_limit));
-	} else if (!evt.is_op && settings.plimit <= 0) {
+	} else if (!evt.has_op && settings.plimit <= 0) {
 		return evt.reply("Only admins can start unlimited games.");
 	}
 
