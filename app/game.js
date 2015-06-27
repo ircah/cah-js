@@ -335,6 +335,28 @@ function _format_card(card, values)
 	}
 }
 
+function _format_card_opts(card, values)
+{
+	if (card.pick === 2) {
+		return util.format(
+			"%s[PICK %d]%s",
+			global.client.format.bold,
+			card.pick,
+			global.client.format.bold
+		);
+	} else if (card.pick > 2) {
+		return util.format(
+			"%s[PICK %d] [DRAW %d]%s",
+			global.client.format.bold,
+			card.pick,
+			card.pick - 1,
+			global.client.format.bold
+		);
+	} else {
+		return "";
+	}
+}
+
 function _check_players(gameid)
 {
 	if(games[gameid].players.length >= 3)
@@ -413,7 +435,13 @@ function _round(gameid)
 		games[gameid].czar
 	));
 	games[gameid].q_card = cards.randomQuestionCard(games[gameid].settings.coll);
-	global.client.send(games[gameid].settings.channel, client.format.bold + "CARD: " + client.format.bold + _format_card(games[gameid].q_card));
+	global.client.send(games[gameid].settings.channel, util.format(
+		"%sCARD:%s %s %s",
+		global.client.format.bold,
+		global.client.format.bold,
+		_format_card(games[gameid].q_card),
+		_format_card_opts(games[gameid].q_card)
+	));
 	_refill_cards(gameid);
 	_notice_cards(gameid);
 	games[gameid].roundRunning = true;
