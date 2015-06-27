@@ -528,9 +528,16 @@ function _refill_cards(gameid, pl)
 		_.each(games[gameid].players, function(pl) { _refill_cards(gameid, pl); });
 		return;
 	}
+
+	var draw = 10;
+
+	if (games[gameid].q_card.pick > 2) {
+		draw = draw + (games[gameid].q_card.pick - 1);
+	}
+
 	if(!games[gameid].cards[pl])
 		games[gameid].cards[pl] = [];
-	while(games[gameid].cards[pl].length < 10)
+	while(games[gameid].cards[pl].length < draw)
 		games[gameid].cards[pl].push(cards.randomAnswerCard(games[gameid].settings.coll));
 }
 
