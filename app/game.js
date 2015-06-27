@@ -415,28 +415,6 @@ function _notice_cards(gameid, pl)
 	}
 }
 
-function _pretty_list(array) {
-	var ret = "";
-
-	if (array.length === 1) {
-		return array[0];
-	} else {
-		for (var i = 0; i < array.length; i++) {
-			ret = ret + array[i];
-			
-			if (i + 2 === array.length) { // if we're the second to last option in the array...
-				ret = ret + " and ";
-			} else if (i < array.length && i + 1 !== array.length) { // if we're anywhere in the array EXCEPT the end of the array...
-				ret = ret + ", ";
-			} else { // this is called when we reach the end. do nothing.
-				continue;
-			}
-		}
-	}
-
-	return ret;
-}
-
 function _round(gameid)
 {
 	var tmp;
@@ -671,6 +649,28 @@ function removeByIndex(array, idxlist)
 			out.push(elem);
 	});
 	return out;
+}
+
+function _pretty_list(array) {
+	var ret = "";
+
+	if (array.length === 1) {
+		return array[0];
+	} else {
+		for (var i = 0; i < array.length; i++) {
+			ret = ret + array[i];
+			
+			if (i + 2 === array.length) { // if we're the second to last option in the array...
+				ret = ret + " and ";
+			} else if (i < array.length && i + 1 !== array.length) { // if we're anywhere in the array EXCEPT the end of the array...
+				ret = ret + ", ";
+			} else { // this is called when we reach the end. do nothing.
+				continue;
+			}
+		}
+	}
+
+	return ret;
 }
 
 /* commands */
