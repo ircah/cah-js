@@ -213,7 +213,7 @@ function game_pick(gameid, user, cards)
 
 function game_show_points(gameid, show_all)
 {
-	var tmp;
+	var tmp, tmp2 = [];
 	var out = "";
 	var prev_pts = -1;
 
@@ -232,17 +232,18 @@ function game_show_points(gameid, show_all)
 	tmp = _.sortBy(tmp, function(a) {
 		return -a.points;
 	});
+	
 	_.each(tmp, function(o) {
 		if(prev_pts != o.points) {
 			if(prev_pts != -1) {
-				out = out.slice(0, -2);
-				out += " (" + prev_pts + " awesome points); ";
+				out += util.format("%s (%d awesome points); ", _pretty_list(tmp2), prev_pts);
+				tmp2 = [];
 			}
 			prev_pts = o.points;
 		}
-		out += o.name + ", ";
+		tmp2.push(o.name);
 	});
-	out = out.slice(0, -2) + " (" + prev_pts + " awesome points)";
+	out += util.format("%s (%d awesome points)", _pretty_list(tmp2), prev_pts);
 
 	global.client.send(games[gameid].settings.channel, util.format(
 		"Point limit is %s%d%s. The most horrible people: %s",
@@ -414,6 +415,27 @@ function _notice_cards(gameid, pl)
 	}
 }
 
+function _pretty_list(array) {
+	var ret = "";
+
+	if (array.length === 1) {
+		return array[0];
+	} else {
+		for (var i = 0; i < array.length; i++) {
+			ret = ret + array[i];
+			
+			if (i + 2 === array.length) { // if we're the second to last option in the array...
+				ret = ret + " and ";
+			} else if (i < array.length && i + 1 !== array.length) { // if we're anywhere in the array EXCEPT the end of the array...
+				ret = ret + ", ";
+			} else { // this is called when we reach the end. do nothing.
+				continue;
+			}
+		}
+	}
+
+	return ret;
+}
 
 function _round(gameid)
 {
@@ -493,7 +515,7 @@ function _check_plimit(gameid)
 		if (won.length == 1)
 			tmp = util.format("%s was the winner with %d points", won[0], tmp);
 		else
-			tmp = util.format("%s were the winners with %d points each", won.join(", "), tmp);
+			tmp = util.format("%s were the winners with %d points each", _pretty_list(tmp), tmp);
 		global.client.send(games[gameid].settings.channel, util.format(
 			"Sorry to ruin the fun, but that was the last round of the game! %s!",
 			tmp
