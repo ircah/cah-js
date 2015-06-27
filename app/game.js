@@ -386,7 +386,7 @@ function _start_game(gameid)
 	}
 	global.client.send(games[gameid].settings.channel, util.format(
 		"Starting %s with '%s' cards: %s",
-		games[gameid].settings.plimit > 0 ? util.format("game till %d points", games[gameid].settings.plimit) : "infinite game",
+		games[gameid].settings.plimit > 0 ? util.format("a game till %d points", games[gameid].settings.plimit) : "an infinite game",
 		games[gameid].settings.coll,
 		cards.collectionInfo(games[gameid].settings.coll)
 	));
