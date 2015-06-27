@@ -142,7 +142,7 @@ function game_show_status(gameid)
 		global.client.format.bold,
 		global.client.format.bold,
 		games[gameid].czar,
-		tmp.join(", ")
+		_pretty_list(tmp)
 	));
 }
 
