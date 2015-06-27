@@ -41,7 +41,7 @@ out.answers = [];
 out.meta = {};
 out.meta.name = data[data.order[0]].name;
 
-for(e in data.blackCards) {
+for(var e in data.blackCards) {
 	e = data.blackCards[e];
 	var tmp = {};
 
@@ -53,7 +53,7 @@ for(e in data.blackCards) {
 	i++;
 }
 
-for(e in data.whiteCards) {
+for(var e in data.whiteCards) {
 	e = data.whiteCards[e];
 	if(e.slice(-1) == '.')
 		e = e.slice(0, -1);

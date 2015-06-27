@@ -153,7 +153,7 @@ function game_pick(gameid, user, cards)
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
 	if(user == games[gameid].czar) {
-		if(games[gameid].round_stage == 0) {
+		if(games[gameid].round_stage === 0) {
 			global.client.send(games[gameid].settings.channel, util.format("%s: The czar does not play (yet).", user));
 		} else {
 			var winner;
@@ -273,7 +273,7 @@ function game_swap_cards(gameid, user) {
 		else if(games[gameid].hasPlayed[user] == 4)
 			tmp = "can't play";
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, tmp));
-	} else if(games[gameid].points[user] == 0) {
+	} else if(games[gameid].points[user] === 0) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You need at least one awesome point to use !swap.", user));
 	}
 	// Remove cards from the player and give them new ones.
@@ -429,8 +429,8 @@ function _check_all_played(gameid)
 	});
 	tmp = _.without(tmp, games[gameid].czar);
 
-	if(tmp.length == 0) {
-		var tmp = games[gameid].players;
+	if(tmp.length === 0) {
+		tmp = games[gameid].players;
 		tmp = _.without(tmp, games[gameid].czar);
 		_.each(games[gameid].hasPlayed, function(a, pl) {
 			if(a == 2 || a == 3 || a == 4) { // player swapped or joined new
@@ -632,7 +632,7 @@ function cmd_start(evt, args) {
 		if(arg.match(/^\d+$/)) { // numeric arg -> point limit
 			try {
 				settings.plimit = parseIntEx(arg);
-			} catch(e) {};
+			} catch(e) {}
 		} else { // string arg -> collection
 			if(cards.collectionExists(arg))
 				settings.coll = arg;
@@ -704,7 +704,7 @@ function cmd_pick(evt, args) {
 	_.each(args, function(arg) {
 		try {
 			a.push(parseIntEx(arg));
-		} catch(e) {};
+		} catch(e) {}
 	});
 	game_pick(evt.channel, evt.user, a);
 }
@@ -741,7 +741,7 @@ function cmd_flastround(evt, args) {
 		if(arg.match(/^\d+$/)) { // numeric arg -> round number
 			try {
 				a = parseIntEx(arg);
-			} catch(e) {};
+			} catch(e) {}
 		}
 	});
 
@@ -759,26 +759,26 @@ function cmd_fleave(evt, args) {
 
 exports.setup = function() {
 	// Normal commands
-	global.commands["start"] = cmd_start;
-	global.commands["stop"] = cmd_stop;
-	global.commands["join"] = cmd_join;
-	global.commands["leave"] = cmd_leave;
-	global.commands["players"] = cmd_players;
-	global.commands["cards"] = cmd_cards;
-	global.commands["status"] = cmd_status;
-	global.commands["pick"] = cmd_pick;
-	global.commands["points"] = cmd_points;
-	global.commands["swap"] = cmd_swap;
+	global.commands.start = cmd_start;
+	global.commands.stop = cmd_stop;
+	global.commands.join = cmd_join;
+	global.commands.leave = cmd_leave;
+	global.commands.players = cmd_players;
+	global.commands.cards = cmd_cards;
+	global.commands.status = cmd_status;
+	global.commands.pick = cmd_pick;
+	global.commands.points = cmd_points;
+	global.commands.swap = cmd_swap;
 	// Aliases
-	global.commands["s"] = cmd_start;
-	global.commands["j"] = cmd_join;
-	global.commands["l"] = cmd_leave;
-	global.commands["p"] = cmd_pick;
-	global.commands["pts"] = cmd_points;
+	global.commands.s = cmd_start;
+	global.commands.j = cmd_join;
+	global.commands.l = cmd_leave;
+	global.commands.p = cmd_pick;
+	global.commands.pts = cmd_points;
 	// Admin commands
-	global.commands["fpass"] = cmd_fpass;
-	global.commands["flastround"] = cmd_flastround;
-	global.commands["fleave"] = cmd_fleave;
+	global.commands.fpass = cmd_fpass;
+	global.commands.flastround = cmd_flastround;
+	global.commands.fleave = cmd_fleave;
 
 	cards.setup();
 };
