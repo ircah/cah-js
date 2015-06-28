@@ -724,7 +724,7 @@ function cmd_stop(evt, args) {
 
 function cmd_join(evt, args) {
 	if(!games[evt.channel])
-		return evt.reply("No game running, start one with !start.");
+		cmd_start(evt, args);
 	join_game(evt.channel, evt.user);
 }
 
@@ -830,6 +830,8 @@ exports.setup = function() {
 	global.commands.s = cmd_start;
 	global.commands.j = cmd_join;
 	global.commands.l = cmd_leave;
+	global.commands.q = cmd_leave;
+	global.commands.quit = cmd_leave;
 	global.commands.p = cmd_pick;
 	global.commands.pts = cmd_points;
 	// Admin commands
