@@ -11,8 +11,8 @@ exports.handle = function(evt, msg) {
 	var m = msg.match(/^!([A-Za-z0-9]+)(?: (.+))?$/);
 	if(!m)
 		return;
-	if(global.commands[m[1]])
-		global.commands[m[1]](evt, m[2]);
+	if(global.commands[m[1].lower()])
+		global.commands[m[1].lower()](evt, m[2]);
 	else
 		console.log("[commands.js] unknown command: '!%s'", m[1]);
 };
