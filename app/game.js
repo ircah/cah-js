@@ -196,7 +196,7 @@ function game_pick(gameid, user, cards)
 			return global.client.send(games[gameid].settings.channel, util.format("You need to pick %d cards.", games[gameid].q_card.pick));
 		if(cards.length != _.uniq(cards).length)
 			return global.client.send(games[gameid].settings.channel, "You can't pick a card more than once.");
-		if(_.min(cards) < 1 || _.max(cards) > 10)
+		if(_.min(cards) < 1 || _.max(cards) > games[gameid].cards[user].length)
 			return global.client.send(games[gameid].settings.channel, "Invalid cards selected.");
 		cards = _.map(cards, function(n) { return n - 1; });
 		var pick = [];
