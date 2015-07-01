@@ -330,7 +330,7 @@ function _format_card(card, values)
 			return global.client.format.bold + text + global.client.format.bold;
 		});
 		if(card.text.indexOf("%s") == -1)
-			return card.text + " " + prettyList(vals);
+			return card.text + " " + _pretty_list(vals);
 		else
 			return util.format.apply(this, _.flatten([card.text, vals]));
 	}
