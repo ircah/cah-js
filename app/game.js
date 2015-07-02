@@ -304,6 +304,29 @@ function game_force_pass(gameid, user)
 	_check_all_played(gameid);
 }
 
+function game_force_limit(gameid, limit)
+{
+	var tmp = [];
+	var high_pts, low_limit;
+
+	tmp = _.map(games[gameid].points, function(pts, pl) {
+		return {name: pl, points: pts};
+	});
+	tmp = _.sortBy(tmp, function(a) {
+		return -a.points;
+	});
+
+	high_pts = tmp[0].points; // Highest Points in the game
+	low_limit = Math.ceil((high_pts + 1) * 1.618); // Lowest possible point limit.
+
+	if (limit < low_limit) {
+		return global.client.send(games[gameid].settings.channel, util.format("The lowest point limit you can set this game to is %d.", low_limit));
+	} else {
+		games[gameid].settings.plimit = limit;
+		return global.client.send(games[gameid].settings.channel, util.format("The point limit is now %d.", limit));
+	}
+}
+
 function game_last_round(gameid, round_no)
 {
 	if (round_no)
@@ -786,6 +809,25 @@ function cmd_fpass(evt, args) {
 	game_force_pass(evt.channel, args.trim());
 }
 
+function cmd_flimit(evt, args) {
+	if(!games[evt.channel])
+		return;
+	if(!evt.has_op)
+		return;
+
+	var a = null;
+
+	_.each(args, function(arg) {
+		if(arg.match(/^\d+$/)) { // numeric arg -> round number
+			try {
+				a = parseIntEx(arg);
+			} catch(e) {}
+		}
+	});
+
+	game_force_limit(evt.channel, a);
+}
+
 function cmd_flastround(evt, args) {
 	if(!games[evt.channel])
 		return;
@@ -835,6 +877,7 @@ exports.setup = function() {
 	global.commands.p = cmd_pick;
 	global.commands.pts = cmd_points;
 	// Admin commands
+	global.commands.flimit = cmd_flimit;
 	global.commands.fpass = cmd_fpass;
 	global.commands.flastround = cmd_flastround;
 	global.commands.fleave = cmd_fleave;
