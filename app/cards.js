@@ -17,7 +17,25 @@ function load()
 	_.each(setnames, function(setname) {
 		var set = JSON.parse(fs.readFileSync(util.format("config/sets/%s.json", setname), "utf8"));
 		_.each(set.questions, function(q) {
-			q.pick = q.pick || 1; // 'pick' is optional
+			var tmp, i;
+			tmp = q.text;
+
+			if (q.pick === undefined) {
+				q.pick = 0;  // initialize
+
+				while ((i = tmp.indexOf("%s")) !== -1) {
+					q.pick++;
+					tmp = tmp.slice(i + 2);
+				}
+
+				if (q.pick === 0) {
+					q.pick = 1;  // default to pick 1 if no %s found and not explicitly specified
+				}
+			}
+
+			if (q.pick < 1 || (q.pick % 1) !== 0) {
+				throw new RangeError(util.format("q.pick must be a positive integer (got %s)", q.pick));
+			}
 		});
 		loaded_sets[setname] = set;
 	});
