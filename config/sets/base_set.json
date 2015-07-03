@@ -68,14 +68,20 @@
     { "text": "I never truly understood %s until I encountered %s." },
     { "text": "Rumor has it that Vladimir Putin's favorite delicacy is %s stuffed with %s." },
     { "text": "Lifetime® presents %s, the story of %s." },
-    { "text": "Make a haiku.", "pick": 3 },
+    {
+      "text": "Make a haiku.",
+      "pick": 3
+    },
     { "text": "In M. Night Shyamalan's new movie, Bruce Willis discovers that %s had really been %s all along." },
     { "text": "%s is a slippery slope that leads to %s." },
     { "text": "In a world ravaged by %s, our only solace is %s." },
     { "text": "That's right, I killed %s. How, you ask? %s." },
     { "text": "When I was tripping on acid, %s turned into %s." },
     { "text": "%s + %s = %s." },
-    { "text": "What's the next superhero/sidekick duo?", "pick": 2 },
+    {
+      "text": "What's the next superhero/sidekick duo?",
+      "pick": 2
+    },
     { "text": "Dear Abby, I'm having some trouble with %s and would like your advice." },
     { "text": "After the earthquake, Sean Penn brought %s to the people of Haiti." },
     { "text": "In L.A. County Jail, word is you can trade 200 cigarettes for %s." },
