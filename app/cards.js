@@ -15,7 +15,14 @@ function load()
 	});
 
 	_.each(setnames, function(setname) {
-		var set = JSON.parse(fs.readFileSync(util.format("config/sets/%s.json", setname), "utf8"));
+		var path, set;
+	
+		path = util.format("config/sets/%s.json", setname);
+		if (!fs.existsSync(path)) {
+			path = util.format("sets/%s.json", setname);
+		}
+
+		set = JSON.parse(fs.readFileSync(path));
 		_.each(set.questions, function(q) {
 			var tmp, i;
 			tmp = q.text;
