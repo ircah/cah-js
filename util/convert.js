@@ -4,7 +4,7 @@ var entities = new (require('html-entities').AllHtmlEntities)();
 function process_txt(text)
 {
 	var a;
-	
+
 	a = text
 		//.replace(/<br>/g, "\u21b2")
 		.replace(/(?:<br>)+/g, " ")
@@ -46,7 +46,7 @@ for(var e in data.blackCards) {
 	var tmp = {};
 
 	tmp.text = process_txt(e.text.replace(/_/g, "%s"));
-	
+
 	if(e.pick != 1)
 		tmp.pick = e.pick;
 	out.questions.push(tmp);

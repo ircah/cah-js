@@ -16,7 +16,7 @@ function load()
 
 	_.each(setnames, function(setname) {
 		var path, set;
-	
+
 		path = util.format("config/sets/%s.json", setname);
 		if (!fs.existsSync(path)) {
 			path = util.format("sets/%s.json", setname);

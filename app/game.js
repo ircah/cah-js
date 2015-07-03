@@ -232,7 +232,7 @@ function game_show_points(gameid, show_all)
 	tmp = _.sortBy(tmp, function(a) {
 		return -a.points;
 	});
-	
+
 	_.each(tmp, function(o) {
 		if(prev_pts != o.points) {
 			if(prev_pts != -1) {
@@ -682,7 +682,7 @@ function _pretty_list(array) {
 	} else {
 		for (var i = 0; i < array.length; i++) {
 			ret = ret + array[i];
-			
+
 			if (i + 2 === array.length) { // if we're the second to last option in the array...
 				ret = ret + " and ";
 			} else if (i < array.length && i + 1 !== array.length) { // if we're anywhere in the array EXCEPT the end of the array...
