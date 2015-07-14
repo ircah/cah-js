@@ -815,17 +815,23 @@ function cmd_flimit(evt, args) {
 	if(!evt.has_op)
 		return;
 
-	var a = null;
+	if (args === undefined) {
+		return evt.reply("No limit specified");
+	}
 
-	_.each(args, function(arg) {
-		if(arg.match(/^\d+$/)) { // numeric arg -> round number
-			try {
-				a = parseIntEx(arg);
-			} catch(e) {}
+	var num = args.trim().split(" ")[0].trim();
+
+	if(num.match(/^\d+$/)) { // numeric arg -> round number
+		try {
+			num = parseIntEx(num);
+		} catch(e) {
+			return evt.reply("Invalid argument");
 		}
-	});
+	} else {
+		return evt.reply("Invalid argument");
+	}
 
-	game_force_limit(evt.channel, a);
+	game_force_limit(evt.channel, num);
 }
 
 function cmd_flastround(evt, args) {
@@ -834,17 +840,23 @@ function cmd_flastround(evt, args) {
 	if(!evt.has_op)
 		return;
 
-	var a = null;
+	if (args === undefined) {
+		args = "";
+	}
 
-	_.each(args, function(arg) {
-		if(arg.match(/^\d+$/)) { // numeric arg -> round number
-			try {
-				a = parseIntEx(arg);
-			} catch(e) {}
+	var num = (args.trim().split(" ")[0] || "").trim();
+
+	if(num.match(/^\d+$/)) { // numeric arg -> round number
+		try {
+			num = parseIntEx(num);
+		} catch(e) {
+			num = null;
 		}
-	});
+	} else {
+		num = null;
+	}
 
-	game_last_round(evt.channel, a);
+	game_last_round(evt.channel, num);
 }
 
 function cmd_fleave(evt, args) {
