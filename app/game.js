@@ -897,4 +897,4 @@ exports.setup = function() {
 	cards.setup();
 };
 
-/* vim: set ts=8 sw=8 sts=8 noet: */
+/* vim: set ts=8 sw=8 sts=0 noet: */
