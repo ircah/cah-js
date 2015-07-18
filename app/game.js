@@ -29,7 +29,7 @@ function start_game(gameid, settings) {
 	games[gameid].q_card = null;
 	games[gameid].round_stage = 0; // 0 -> waiting for players to play, 1 -> waiting for czar to pick winner
 	games[gameid].points = {};
-	games[gameid].last_round = -1; // if game reaches this round no. it will end
+	games[gameid].last_round = -1; // if game reaches this round no, it will end
 
 	global.client.send(settings.channel, util.format(
 		"Starting a new game of %sCards Against Humanity%s. The game will start in %d seconds, type !join to join.",
@@ -142,7 +142,7 @@ function game_show_status(gameid)
 		global.client.format.bold,
 		global.client.format.bold,
 		games[gameid].czar,
-		_pretty_list(tmp)
+		prettyList(tmp)
 	));
 }
 
@@ -153,45 +153,48 @@ function game_pick(gameid, user, cards)
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
 	if(user == games[gameid].czar) {
-		if(games[gameid].round_stage === 0) {
-			global.client.send(games[gameid].settings.channel, util.format("%s: The czar does not play (yet).", user));
-		} else {
-			var winner;
+		if(games[gameid].round_stage === 0)
+			return global.client.send(games[gameid].settings.channel, util.format("%s: The czar does not play yet.", user));
+		var winner;
 
-			if(cards.length != 1) {
-				global.client.send(games[gameid].settings.channel, "You need to select a winner.");
-				return;
-			}
-			if(cards[0] < 1 || cards[0] > games[gameid].pick_order.length) {
-				global.client.send(games[gameid].settings.channel, "Invalid winner.");
-				return;
-			}
-			winner = games[gameid].pick_order[cards[0] - 1];
-			global.client.send(games[gameid].settings.channel, util.format(
-				"%sWinner is:%s %s with \"%s\", gets one awesome point and has %d awesome points!",
-				global.client.format.bold,
-				global.client.format.bold,
-				winner,
-				_format_card(games[gameid].q_card, games[gameid].picks[winner]),
-				++games[gameid].points[winner]
-			));
-			games[gameid].roundRunning = false;
-			clearTimeout(games[gameid].timer_round);
-			if(_check_plimit(gameid))
-				return; // Game ended
-			_round(gameid);
+		if(cards.length != 1) {
+			global.client.send(games[gameid].settings.channel, "You need to select a winner.");
+			return;
 		}
+		if(cards[0] < 1 || cards[0] > games[gameid].pick_order.length) {
+			global.client.send(games[gameid].settings.channel, "Invalid winner.");
+			return;
+		}
+		winner = games[gameid].pick_order[cards[0] - 1];
+		global.client.send(games[gameid].settings.channel, util.format(
+			"%sWinner is:%s %s with \"%s\", gets one awesome point and has %d awesome points!",
+			global.client.format.bold,
+			global.client.format.bold,
+			winner,
+			_format_card(games[gameid].q_card, games[gameid].picks[winner]),
+			++games[gameid].points[winner]
+		));
+
+		games[gameid].roundRunning = false;
+		clearTimeout(games[gameid].timer_round);
+		if(_check_plimit(gameid))
+			return; // Game ended
+		_round(gameid);
 	} else {
 		if(games[gameid].round_stage == 1)
 			return;
-		if(games[gameid].hasPlayed[user] == 1)
-			return global.client.send(games[gameid].settings.channel, "You already picked this round.");
-		else if(games[gameid].hasPlayed[user] == 2)
-			return global.client.send(games[gameid].settings.channel, "You swapped this round and can't play.");
-		else if(games[gameid].hasPlayed[user] == 3)
-			return global.client.send(games[gameid].settings.channel, "You joined this round, you'll get to play next round.");
-		else if(games[gameid].hasPlayed[user] == 4)
-			return global.client.send(games[gameid].settings.channel, "You can't play this round.");
+		else if(games[gameid].hasPlayed[user]) {
+			var tmp;
+			if(games[gameid].hasPlayed[user] == 1)
+				tmp = "already picked";
+			else if(games[gameid].hasPlayed[user] == 2)
+				tmp = "swapped cards";
+			else if(games[gameid].hasPlayed[user] == 3)
+				tmp = "just joined";
+			else if(games[gameid].hasPlayed[user] == 4)
+				tmp = "can't play";
+			return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, tmp));
+		}
 		if(cards.length != games[gameid].q_card.pick)
 			return global.client.send(games[gameid].settings.channel, util.format("You need to pick %d cards.", games[gameid].q_card.pick));
 		if(cards.length != _.uniq(cards).length)
@@ -217,7 +220,7 @@ function game_show_points(gameid, show_all)
 	var out = "";
 	var prev_pts = -1;
 
-	if (show_all) {
+	if(show_all) {
 		tmp = games[gameid].points;
 	} else {
 		tmp = {};
@@ -236,14 +239,14 @@ function game_show_points(gameid, show_all)
 	_.each(tmp, function(o) {
 		if(prev_pts != o.points) {
 			if(prev_pts != -1) {
-				out += util.format("%s (%d awesome points); ", _pretty_list(tmp2), prev_pts);
+				out += util.format("%s (%d awesome points); ", prettyList(tmp2), prev_pts);
 				tmp2 = [];
 			}
 			prev_pts = o.points;
 		}
 		tmp2.push(o.name);
 	});
-	out += util.format("%s (%d awesome points)", _pretty_list(tmp2), prev_pts);
+	out += util.format("%s (%d awesome points)", prettyList(tmp2), prev_pts);
 
 	global.client.send(games[gameid].settings.channel, util.format(
 		"Point limit is %s%d%s. The most horrible people: %s",
@@ -260,15 +263,15 @@ function game_swap_cards(gameid, user) {
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
 	if(user == games[gameid].czar) {
-		return global.client.send(games[gameid].settings.channel, util.format("%s: You can't swap your cards because you're the card czar.", user));
+		return global.client.send(games[gameid].settings.channel, util.format("%s: The card czar can't swap cards.", user));
 	} else if(games[gameid].players.length < SWAP_MIN_PLAYERS) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: There must be at least %d players to use !swap.", user, SWAP_MIN_PLAYERS));
 	} else if(games[gameid].hasPlayed[user]) {
 		var tmp;
 		if(games[gameid].hasPlayed[user] == 1)
-			tmp = "already picked";
+			tmp = "picked";
 		else if(games[gameid].hasPlayed[user] == 2)
-			tmp = "already swapped";
+			tmp = "already swapped cards";
 		else if(games[gameid].hasPlayed[user] == 3)
 			tmp = "just joined";
 		else if(games[gameid].hasPlayed[user] == 4)
@@ -277,7 +280,7 @@ function game_swap_cards(gameid, user) {
 	} else if(games[gameid].points[user] === 0) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You need at least one awesome point to use !swap.", user));
 	}
-	// Remove cards from the player and give them new ones.
+	// Remove cards from the player and give them new ones
 	games[gameid].hasPlayed[user] = 2;
 	games[gameid].cards[user] = [];
 	_refill_cards(gameid, user);
@@ -306,20 +309,12 @@ function game_force_pass(gameid, user)
 
 function game_force_limit(gameid, limit)
 {
-	var tmp = [];
 	var high_pts, low_limit;
 
-	tmp = _.map(games[gameid].points, function(pts, pl) {
-		return {name: pl, points: pts};
-	});
-	tmp = _.sortBy(tmp, function(a) {
-		return -a.points;
-	});
+	high_pts = _.max(games[gameid].points);
+	low_limit = Math.ceil((high_pts + 1) * 1.618); // Lowest possible point limit
 
-	high_pts = tmp[0].points; // Highest Points in the game
-	low_limit = Math.ceil((high_pts + 1) * 1.618); // Lowest possible point limit.
-
-	if (limit < low_limit) {
+	if(limit < low_limit) {
 		return global.client.send(games[gameid].settings.channel, util.format("The lowest point limit you can set this game to is %d.", low_limit));
 	} else {
 		games[gameid].settings.plimit = limit;
@@ -329,7 +324,7 @@ function game_force_limit(gameid, limit)
 
 function game_last_round(gameid, round_no)
 {
-	if (round_no)
+	if(round_no !== null && round_no !== undefined)
 		games[gameid].last_round = round_no;
 	else
 		games[gameid].last_round = games[gameid].round_no;
@@ -353,7 +348,7 @@ function _format_card(card, values)
 			return global.client.format.bold + text + global.client.format.bold;
 		});
 		if(card.text.indexOf("%s") == -1)
-			return card.text + " " + _pretty_list(vals);
+			return card.text + " " + prettyList(vals);
 		else
 			return util.format.apply(this, _.flatten([card.text, vals]));
 	}
@@ -361,14 +356,14 @@ function _format_card(card, values)
 
 function _format_card_opts(card, values)
 {
-	if (card.pick === 2) {
+	if(card.pick === 2) {
 		return util.format(
 			"%s[PICK %d]%s",
 			global.client.format.bold,
 			card.pick,
 			global.client.format.bold
 		);
-	} else if (card.pick > 2) {
+	} else if(card.pick > 2) {
 		return util.format(
 			"%s[PICK %d] [DRAW %d]%s",
 			global.client.format.bold,
@@ -431,7 +426,7 @@ function _notice_cards(gameid, pl)
 		_.each(games[gameid].cards[pl], function(card, i) {
 			cards.push(util.format("%s[%d]%s %s", client.format.bold, i+1, client.format.bold, card));
 		});
-		if (cards.length > 0)
+		if(cards.length > 0)
 			global.client.notice(pl, "Your cards: " + cards.join(" "));
 		else
 			global.client.notice(pl, "You don't have any cards.");
@@ -484,7 +479,7 @@ function _check_all_played(gameid)
 		tmp = games[gameid].players;
 		tmp = _.without(tmp, games[gameid].czar);
 		_.each(games[gameid].hasPlayed, function(a, pl) {
-			if(a == 2 || a == 3 || a == 4) { // player swapped or joined new
+			if(a == 2 || a == 3 || a == 4) { // player swapped, joined new or can't play (other reason)
 				tmp = _.without(tmp, pl);
 			}
 		});
@@ -513,10 +508,10 @@ function _check_plimit(gameid)
 			}
 		});
 
-		if (won.length == 1)
+		if(won.length == 1)
 			tmp = util.format("%s was the winner with %d points", won[0], tmp);
 		else
-			tmp = util.format("%s were the winners with %d points each", _pretty_list(tmp), tmp);
+			tmp = util.format("%s were the winners with %d points each", prettyList(tmp), tmp);
 		global.client.send(games[gameid].settings.channel, util.format(
 			"Sorry to ruin the fun, but that was the last round of the game! %s!",
 			tmp
@@ -554,7 +549,7 @@ function _refill_cards(gameid, pl)
 
 	var draw = 10;
 
-	if (games[gameid].q_card.pick > 2) {
+	if(games[gameid].q_card.pick > 2) {
 		draw = draw + (games[gameid].q_card.pick - 1);
 	}
 
@@ -674,20 +669,20 @@ function removeByIndex(array, idxlist)
 	return out;
 }
 
-function _pretty_list(array) {
+function prettyList(array) {
 	var ret = "";
 
-	if (array.length === 1) {
+	if(array.length === 1) {
 		return array[0];
 	} else {
 		for (var i = 0; i < array.length; i++) {
 			ret = ret + array[i];
 
-			if (i + 2 === array.length) { // if we're the second to last option in the array...
+			if(i + 2 === array.length) { // second to last option in the array
 				ret = ret + " and ";
-			} else if (i < array.length && i + 1 !== array.length) { // if we're anywhere in the array EXCEPT the end of the array...
+			} else if(i < array.length && i + 1 !== array.length) { // anywhere in the array EXCEPT the end of the array
 				ret = ret + ", ";
-			} else { // this is called when we reach the end. do nothing.
+			} else { // end of the array
 				continue;
 			}
 		}
@@ -719,13 +714,9 @@ function cmd_start(evt, args) {
 		}
 	});
 
-	if (!config.collections.hasOwnProperty(settings.coll)) {
-		return evt.reply(util.format("Incorrect card collection \"%s\".", settings.coll));
-	}
-
-	if (!evt.has_op && settings.plimit > global.config.max_point_limit) {
+	if(!evt.has_op && settings.plimit > global.config.max_point_limit) {
 		return evt.reply(util.format("Only admins can start games with a point limit over %d.", global.config.max_point_limit));
-	} else if (!evt.has_op && settings.plimit <= 0) {
+	} else if(!evt.has_op && settings.plimit <= 0) {
 		return evt.reply("Only admins can start unlimited games.");
 	}
 
@@ -739,9 +730,8 @@ function cmd_stop(evt, args) {
 	if(evt.has_op) {
 		stop_game(evt.channel); // not passing user stops the game unconditionally
 	} else {
-		if(!stop_game(evt.channel, evt.user)) {
+		if(!stop_game(evt.channel, evt.user))
 			evt.reply("You can't stop the game.");
-		}
 	}
 }
 
@@ -760,7 +750,7 @@ function cmd_leave(evt, args) {
 function cmd_players(evt, args) {
 	if(!games[evt.channel])
 		return;
-	evt.reply("Currently playing: " + game_get_players(evt.channel).join(", "));
+	evt.reply("Currently playing: " + prettyList(game_get_players(evt.channel)));
 }
 
 function cmd_cards(evt, args) {
@@ -778,9 +768,11 @@ function cmd_status(evt, args) {
 function cmd_pick(evt, args) {
 	if(!games[evt.channel])
 		return;
+	if(args === undefined)
+		return;
 	var a = [];
 
-	args = args ? args.split(" "): [];
+	args = args.split(" ");
 	_.each(args, function(arg) {
 		try {
 			a.push(parseIntEx(arg));
@@ -814,20 +806,14 @@ function cmd_flimit(evt, args) {
 		return;
 	if(!evt.has_op)
 		return;
-
-	if (args === undefined) {
+	if(args === undefined)
 		return evt.reply("No limit specified");
-	}
 
 	var num = args.trim().split(" ")[0].trim();
 
-	if(num.match(/^\d+$/)) { // numeric arg -> round number
-		try {
-			num = parseIntEx(num);
-		} catch(e) {
-			return evt.reply("Invalid argument");
-		}
-	} else {
+	try {
+		num = parseIntEx(num);
+	} catch(e) {
 		return evt.reply("Invalid argument");
 	}
 
@@ -839,21 +825,15 @@ function cmd_flastround(evt, args) {
 		return;
 	if(!evt.has_op)
 		return;
+	if(args === undefined)
+		return game_last_round(evt.channel, null);
 
-	if (args === undefined) {
-		args = "";
-	}
+	var num = args.trim().split(" ")[0].trim();
 
-	var num = (args.trim().split(" ")[0] || "").trim();
-
-	if(num.match(/^\d+$/)) { // numeric arg -> round number
-		try {
-			num = parseIntEx(num);
-		} catch(e) {
-			num = null;
-		}
-	} else {
-		num = null;
+	try {
+		num = parseIntEx(num);
+	} catch(e) {
+		return evt.reply("Invalid argument");
 	}
 
 	game_last_round(evt.channel, num);
