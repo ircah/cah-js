@@ -109,4 +109,4 @@ exports.setup = function() {
 	console.log("[cards.js] Loaded " + exports.info());
 };
 
-/* vim: set ts=8 sw=8 sts=0 noet: */
+/* vim: set ts=4 sw=4 sts=0 noet: */
