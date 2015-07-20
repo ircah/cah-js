@@ -600,7 +600,7 @@ function timer_round(gameid, n) {
 		case 3:
 			global.client.send(games[gameid].settings.channel, "Time's up.");
 			// Directly start a new round unless enough people have picked
-			if(_.size(games[gameid].picks) >= 2) {
+			if(_.size(games[gameid].picks) >= 2 && games[gameid].round_stage == 0) {
 				_.each(games[gameid].players, function(pl) {
 					if(games[gameid].picks[pl])
 						return;
