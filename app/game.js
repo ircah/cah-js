@@ -3,6 +3,7 @@ var util = require('util');
 
 var cards = require('./cards.js');
 var CardPool = require('./cardpool.js').CardPool;
+var Timer = require('./timer.js').Timer;
 var games = {};
 
 // should this be in the config?
@@ -25,9 +26,10 @@ function start_game(gameid, settings) {
 	games[gameid].pickIds = {};
 	games[gameid].hasPlayed = {}; // 1 -> player played, 2 -> player swapped, 3 -> player just joined and can't play, 4 -> didn't play cause other reason
 	games[gameid].pick_order = []; // order in which answers were displayed to the czar
-	games[gameid].timer_start = setTimeout(function() { timer_start(gameid); }, INITIAL_WAIT_SECS * 1000);
-	games[gameid].timer_stop = null;
-	games[gameid].timer_round = null;
+	games[gameid].timer_start = new Timer(INITIAL_WAIT_SECS);
+	games[gameid].timer_stop = new Timer(NOT_ENOUGH_PLAYERS_WAIT_MINS * 60);
+	games[gameid].timer_round = // multi-purpose, must be started with .resumeFrom() instead of .start()
+		new Timer(_.max([ROUND_MAX_PLAY_TIME_MINS, ROUND_MAX_CZAR_TIME_MINS]) * 60);
 	games[gameid].roundRunning = false;
 	games[gameid].round_no = 0; // incremented to 1 in _round()
 	games[gameid].q_card = null;
@@ -35,6 +37,14 @@ function start_game(gameid, settings) {
 	games[gameid].points = {};
 	games[gameid].last_round = -1; // if game reaches this round no, it will end
 
+	games[gameid].timer_start.onElapsed(_timer_start.bind(null, gameid));
+	games[gameid].timer_stop.onElapsed(_timer_stop.bind(null, gameid));
+	games[gameid].timer_round.on(-60, _timer_round_1min.bind(null, gameid));
+	games[gameid].timer_round.on(-30, _timer_round_30sec.bind(null, gameid));
+	games[gameid].timer_round.on(-10, _timer_round_10sec.bind(null, gameid));
+	games[gameid].timer_round.onElapsed(_timer_round_elapsed.bind(null, gameid));
+
+	games[gameid].timer_start.start();
 	global.client.send(settings.channel, util.format(
 		"Starting a new game of %sCards Against Humanity%s. The game will start in %d seconds, type !join to join.",
 		global.client.format.bold,
@@ -50,12 +60,9 @@ function stop_game(gameid, user) {
 	if(global.config.voice_players)
 		ircDevoice(global.client, games[gameid].settings.channel, games[gameid].players);
 
-	if(games[gameid].timer_start)
-		clearTimeout(games[gameid].timer_start);
-	if(games[gameid].timer_stop)
-		clearTimeout(games[gameid].timer_stop);
-	if(games[gameid].timer_round)
-		clearTimeout(games[gameid].timer_round);
+	games[gameid].timer_start.stop();
+	games[gameid].timer_stop.stop();
+	games[gameid].timer_round.stop();
 	games[gameid] = undefined;
 	return true;
 }
@@ -92,7 +99,7 @@ function leave_game(gameid, user)
 		// Abort the round if the czar left, otherwise check whether everyone has played
 		//  (now that a person has left)
 		if(user == games[gameid].czar) {
-			clearTimeout(games[gameid].timer_round);
+			games[gameid].timer_round.stop();
 			global.client.send(games[gameid].settings.channel, "Looks like the czar left, nobody wins this round.");
 			_round(gameid);
 		} else {
@@ -183,7 +190,7 @@ function game_pick(gameid, user, cards)
 		));
 
 		games[gameid].roundRunning = false;
-		clearTimeout(games[gameid].timer_round);
+		games[gameid].timer_round.stop();
 		if(_check_plimit(gameid))
 			return; // Game ended
 		_round(gameid);
@@ -419,28 +426,21 @@ function _check_players(gameid)
 {
 	if(games[gameid].players.length >= 3)
 		return true;
-	if(games[gameid].timer_start)
+	if(games[gameid].timer_start.isRunning())
 		return true; // Don't complain about lack of users if initial period not elapsed yet
-	if(games[gameid].timer_stop)
+	if(games[gameid].timer_stop.isRunning())
 		return false; // Don't complain twice
 	games[gameid].roundRunning = false;
-	if(games[gameid].timer_round)
-		clearTimeout(games[gameid].timer_round);
+	games[gameid].timer_round.stop()
 	global.client.send(games[gameid].settings.channel, util.format("Not enough players to play (need at least 3). Stopping in %d minutes if not enough players.", NOT_ENOUGH_PLAYERS_WAIT_MINS));
-	games[gameid].timer_stop = setTimeout(function() { timer_stop(gameid); }, NOT_ENOUGH_PLAYERS_WAIT_MINS * 60 * 1000);
+	games[gameid].timer_stop.start();
 	return false;
 }
 
 function _start_game(gameid)
 {
-	if(games[gameid].timer_start) {
-		clearTimeout(games[gameid].timer_start);
-		games[gameid].timer_start = null;
-	}
-	if(games[gameid].timer_stop) {
-		clearTimeout(games[gameid].timer_stop);
-		games[gameid].timer_stop = null;
-	}
+	games[gameid].timer_start.stop();
+	games[gameid].timer_stop.stop()
 	global.client.send(games[gameid].settings.channel, util.format(
 		"Starting %s with '%s' cards: %s",
 		games[gameid].settings.plimit > 0 ? util.format("a game till %d points", games[gameid].settings.plimit) : "an infinite game",
@@ -530,9 +530,7 @@ function _round(gameid)
 	_refill_cards(gameid);
 	_notice_cards(gameid);
 	games[gameid].roundRunning = true;
-	if(games[gameid].timer_round)
-		clearTimeout(games[gameid].timer_round);
-	games[gameid].timer_round = setTimeout(function() { timer_round(gameid, 0); }, (ROUND_MAX_PLAY_TIME_MINS - 1) * 60 * 1000);
+	games[gameid].timer_round.resumeFrom(-1 * ROUND_MAX_PLAY_TIME_MINS * 60);
 }
 
 function _check_all_played(gameid)
@@ -566,8 +564,8 @@ function _check_all_played(gameid)
 		});
 
 		games[gameid].round_stage = 1;
-		clearTimeout(games[gameid].timer_round);
-		games[gameid].timer_round = setTimeout(function() { timer_round(gameid, 0); }, (ROUND_MAX_CZAR_TIME_MINS - 1) * 60 * 1000);
+		games[gameid].timer_round.stop();
+		games[gameid].timer_round.resumeFrom(-1 * ROUND_MAX_CZAR_TIME_MINS * 60);
 		global.client.send(games[gameid].settings.channel, util.format("%s: Select the winner using !pick", games[gameid].czar));
 	}
 }
@@ -635,51 +633,43 @@ function _refill_cards(gameid, pl)
 
 /* timers */
 
-function timer_start(gameid) {
-	games[gameid].timer_start = null;
+function _timer_start(gameid) {
 	if(_check_players(gameid))
 		_start_game(gameid);
 }
 
-function timer_stop(gameid) {
-	games[gameid].timer_stop = null;
-	if(games[gameid].players.length < 3) {
+function _timer_stop(gameid) {
+	if(games[gameid].players.length < 3)
 		stop_game(gameid);
-	} else {
+	else
 		_start_game(gameid);
-	}
 }
 
-function timer_round(gameid, n) {
-	games[gameid].timer_round = null;
-	switch(n) {
-		case 0:
-			global.client.send(games[gameid].settings.channel, "Hurry up! 1 minute left.");
-			game_show_status(gameid);
-			games[gameid].timer_round = setTimeout(function() { timer_round(gameid, 1); }, 30 * 1000);
-			break;
-		case 1:
-			global.client.send(games[gameid].settings.channel, "30 seconds left.");
-			games[gameid].timer_round = setTimeout(function() { timer_round(gameid, 2); }, 20 * 1000);
-			break;
-		case 2:
-			global.client.send(games[gameid].settings.channel, "10 seconds left.");
-			games[gameid].timer_round = setTimeout(function() { timer_round(gameid, 3); }, 10 * 1000);
-			break;
-		case 3:
-			global.client.send(games[gameid].settings.channel, "Time's up.");
-			// Directly start a new round unless enough people have picked
-			if(_.size(games[gameid].picks) >= 2 && games[gameid].round_stage == 0) {
-				_.each(games[gameid].players, function(pl) {
-					if(games[gameid].hasPlayed[pl])
-						return;
-					games[gameid].hasPlayed[pl] = 4;
-				});
-				_check_all_played(gameid);
-			} else {
-				_round(gameid);
-			}
-			break;
+function _timer_round_1min(gameid) {
+	global.client.send(games[gameid].settings.channel, "Hurry up! 1 minute left.");
+	game_show_status(gameid);
+}
+
+function _timer_round_30sec(gameid) {
+	global.client.send(games[gameid].settings.channel, "30 seconds left.");
+}
+
+function _timer_round_10sec(gameid) {
+	global.client.send(games[gameid].settings.channel, "10 seconds left.");
+}
+
+function _timer_round_elapsed(gameid) {
+	global.client.send(games[gameid].settings.channel, "Time's up.");
+	// Directly start a new round unless enough people have picked
+	if(_.size(games[gameid].picks) >= 2 && games[gameid].round_stage == 0) {
+		_.each(games[gameid].players, function(pl) {
+			if(games[gameid].hasPlayed[pl])
+				return;
+			games[gameid].hasPlayed[pl] = 4;
+		});
+		_check_all_played(gameid);
+	} else {
+		_round(gameid);
 	}
 }
 
