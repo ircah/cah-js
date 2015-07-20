@@ -19,6 +19,7 @@ function start_game(gameid, settings) {
 	games[gameid].czar = null;
 	games[gameid].cards = {};
 	games[gameid].picks = {};
+	games[gameid].pickIds = {};
 	games[gameid].hasPlayed = {}; // 1 -> player played, 2 -> player swapped, 3 -> player just joined and can't play, 4 -> didn't play cause other reason
 	games[gameid].pick_order = []; // order in which answers were displayed to the czar
 	games[gameid].timer_start = setTimeout(function() { timer_start(gameid); }, INITIAL_WAIT_SECS * 1000);
@@ -183,17 +184,15 @@ function game_pick(gameid, user, cards)
 	} else {
 		if(games[gameid].round_stage == 1)
 			return;
-		else if(games[gameid].hasPlayed[user]) {
-			var tmp;
-			if(games[gameid].hasPlayed[user] == 1)
-				tmp = "already picked";
-			else if(games[gameid].hasPlayed[user] == 2)
-				tmp = "swapped cards";
+		else if(games[gameid].hasPlayed[user] > 1) {
+			var err;
+			if(games[gameid].hasPlayed[user] == 2)
+				err = "swapped cards";
 			else if(games[gameid].hasPlayed[user] == 3)
-				tmp = "just joined";
-			else if(games[gameid].hasPlayed[user] == 4)
-				tmp = "can't play";
-			return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, tmp));
+				err = "just joined";
+			else if(games[gameid].hasPlayed[user] == 4)  // fpassed
+				err = "can't play";
+			return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, err));
 		}
 		if(cards.length != games[gameid].q_card.pick)
 			return global.client.send(games[gameid].settings.channel, util.format("You need to pick %d cards.", games[gameid].q_card.pick));
@@ -207,8 +206,8 @@ function game_pick(gameid, user, cards)
 			pick.push(games[gameid].cards[user][card_idx]);
 		});
 		games[gameid].hasPlayed[user] = 1;
+		games[gameid].pickIds[user] = cards;
 		games[gameid].picks[user] = pick;
-		games[gameid].cards[user] = removeByIndex(games[gameid].cards[user], cards);
 		global.client.notice(user, util.format("You played: %s", _format_card(games[gameid].q_card, pick)));
 		_check_all_played(gameid);
 	}
@@ -483,6 +482,11 @@ function _check_all_played(gameid)
 				tmp = _.without(tmp, pl);
 			}
 		});
+
+		_.each(tmp, function(user) {
+			games[gameid].cards[user] = removeByIndex(games[gameid].cards[user], games[gameid].pickIds[user]);
+		});
+
 		games[gameid].pick_order = _.shuffle(tmp);
 		global.client.send(games[gameid].settings.channel, "Everyone has played. Here are the entries:");
 		_.each(games[gameid].pick_order, function(player, i) {
@@ -490,6 +494,7 @@ function _check_all_played(gameid)
 				"%d: %s", i+1, _format_card(games[gameid].q_card, games[gameid].picks[player])
 			));
 		});
+
 		games[gameid].round_stage = 1;
 		global.client.send(games[gameid].settings.channel, util.format("%s: Select the winner using !pick", games[gameid].czar));
 	}
