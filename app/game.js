@@ -310,10 +310,16 @@ function game_force_limit(gameid, limit)
 	var high_pts, low_limit;
 
 	high_pts = _.max(games[gameid].points);
-	low_limit = Math.ceil((high_pts + 1) * 1.618); // Lowest possible point limit
+	low_limit = high_pts + 1; // Lowest possible point limit
 
-	if(limit < low_limit) {
-		return global.client.send(games[gameid].settings.channel, util.format("The lowest point limit you can set this game to is %d.", low_limit));
+	if(limit === 0) {
+		games[gameid].settings.plimit = limit;
+		return global.client.send(games[gameid].settings.channel, "The point limit is now infinite.");
+	} else if(limit < low_limit) {
+		return global.client.send(
+			games[gameid].settings.channel,
+			util.format("The lowest point limit you can set this game to is %d. If you want to make the game infinite, set it to 0.", low_limit)
+		);
 	} else {
 		games[gameid].settings.plimit = limit;
 		return global.client.send(games[gameid].settings.channel, util.format("The point limit is now %d.", limit));
