@@ -266,11 +266,9 @@ function game_swap_cards(gameid, user) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: The card czar can't swap cards.", user));
 	} else if(games[gameid].players.length < SWAP_MIN_PLAYERS) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: There must be at least %d players to use !swap.", user, SWAP_MIN_PLAYERS));
-	} else if(games[gameid].hasPlayed[user]) {
+	} else if(games[gameid].hasPlayed[user] > 1) {
 		var tmp;
-		if(games[gameid].hasPlayed[user] == 1)
-			tmp = "picked";
-		else if(games[gameid].hasPlayed[user] == 2)
+		if(games[gameid].hasPlayed[user] == 2)
 			tmp = "already swapped cards";
 		else if(games[gameid].hasPlayed[user] == 3)
 			tmp = "just joined";
