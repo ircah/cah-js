@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var fs = require('fs');
 var util = require('util');
+var JSON5 = require('json5');
 
 var loaded_sets = {};
 var compiled_collections = {};
@@ -17,12 +18,12 @@ function load()
 	_.each(setnames, function(setname) {
 		var path, set;
 
-		path = util.format("config/sets/%s.json", setname);
+		path = util.format("config/sets/%s.json5", setname);
 		if (!fs.existsSync(path)) {
-			path = util.format("sets/%s.json", setname);
+			path = util.format("sets/%s.json5", setname);
 		}
 
-		set = JSON.parse(fs.readFileSync(path));
+		set = JSON5.parse(fs.readFileSync(path));
 		_.each(set.questions, function(q) {
 			var tmp, i;
 			tmp = q.text;
@@ -108,5 +109,3 @@ exports.setup = function() {
 
 	console.log("[cards.js] Loaded " + exports.info());
 };
-
-/* vim: set ts=4 sw=4 sts=0 noet: */

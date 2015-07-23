@@ -1,0 +1,26 @@
+{
+	irc: {
+		host: "chat.freenode.net",
+		port: 6697,
+		ssl: true,
+		nick: "cahjsbot",
+		username: "cah",
+		realname: "Cards Against Humanity bot",
+		pass: "",
+		nickserv: {
+			username: "",
+			password: ""
+		},
+		throttling: 500
+	},
+	channels: ["##ircah-dev"],
+	voice_players: true,
+	collections: {
+		base: ["base_set"],
+		extended_pure: ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion"],
+		extended: ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion", "irc-against-humanity/irc-against-humanity"]
+	},
+	default_collection: "extended",
+	max_point_limit: 16,
+	default_point_limit: 7
+}

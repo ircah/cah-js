@@ -1,32 +1,32 @@
 {
-  "questions": [
-    { "text": "Hey baby, come back to my place and I'll show you %s." },
-    { "text": "My gym teacher got fired for adding %s to the obstacle course." },
-    { "text": "Finally! A service that delivers %s right to your door." },
-    { "text": "To prepare for his upcoming role, Daniel Day-Lewis immersed himself in the world of %s." },
-    { "text": "My life is ruled by a vicious cycle of %s and %s." },
-    { "text": "During high school, I never really fit in until I found %s club." },
-    { "text": "Money can't buy me love, but it can buy me %s." },
-    { "text": "Listen, son. If you want to get involved with %s, I won't stop you. Just steer clear of %s." },
-    { "text": "A successful job interview begins with a firm handshake and ends with %s." },
-    { "text": "Call the law offices of Goldstein & Goldstein, because no one should have to tolerate %s in the workplace." },
-    { "text": "Lovin' you is easy 'cause you're %s." },
-    { "text": "The blind date was going horribly until we discovered our shared interest in %s." },
-    { "text": "What left this stain on my couch?" },
-    { "text": "Turns out that %s-Man was neither the hero we needed nor wanted." },
-    { "text": "After months of practice with %s, I think I'm finally ready for %s." },
-    { "text": "In the seventh circle of Hell, sinners must endure %s for all eternity." },
-    { "text": "As part of his daily regimen, Anderson Cooper sets aside 15 minutes for %s." },
-    { "text": "When you get right down to it, %s is just %s." },
-    { "text": "Having problems with %s? Try %s!" },
-    { "text": "And what did you bring for show and tell?" },
-    { "text": "I'm not like the rest of you. I'm too rich and busy for %s." },
-    { "text": "With enough time and pressure, %s will turn into %s." },
-    { "text": "%s: Hours of fun. Easy to use. Perfect for %s!" },
-    { "text": "%s. Awesome in theory, kind of a mess in practice." },
-    { "text": "As part of his contract, Prince won't perform without %s in his dressing room." }
+  questions: [
+    { text: "Hey baby, come back to my place and I'll show you %s." },
+    { text: "My gym teacher got fired for adding %s to the obstacle course." },
+    { text: "Finally! A service that delivers %s right to your door." },
+    { text: "To prepare for his upcoming role, Daniel Day-Lewis immersed himself in the world of %s." },
+    { text: "My life is ruled by a vicious cycle of %s and %s." },
+    { text: "During high school, I never really fit in until I found %s club." },
+    { text: "Money can't buy me love, but it can buy me %s." },
+    { text: "Listen, son. If you want to get involved with %s, I won't stop you. Just steer clear of %s." },
+    { text: "A successful job interview begins with a firm handshake and ends with %s." },
+    { text: "Call the law offices of Goldstein & Goldstein, because no one should have to tolerate %s in the workplace." },
+    { text: "Lovin' you is easy 'cause you're %s." },
+    { text: "The blind date was going horribly until we discovered our shared interest in %s." },
+    { text: "What left this stain on my couch?" },
+    { text: "Turns out that %s-Man was neither the hero we needed nor wanted." },
+    { text: "After months of practice with %s, I think I'm finally ready for %s." },
+    { text: "In the seventh circle of Hell, sinners must endure %s for all eternity." },
+    { text: "As part of his daily regimen, Anderson Cooper sets aside 15 minutes for %s." },
+    { text: "When you get right down to it, %s is just %s." },
+    { text: "Having problems with %s? Try %s!" },
+    { text: "And what did you bring for show and tell?" },
+    { text: "I'm not like the rest of you. I'm too rich and busy for %s." },
+    { text: "With enough time and pressure, %s will turn into %s." },
+    { text: "%s: Hours of fun. Easy to use. Perfect for %s!" },
+    { text: "%s. Awesome in theory, kind of a mess in practice." },
+    { text: "As part of his contract, Prince won't perform without %s in his dressing room." },
   ],
-  "answers": [
+  answers: [
     "All my friends dying",
     "Shutting the fuck up",
     "An ass disaster",
@@ -101,9 +101,9 @@
     "A surprising amount of hair",
     "Eating Tom Selleck's mustache to gain his powers",
     "Velcro™",
-    "A PowerPoint presentation"
+    "A PowerPoint presentation",
   ],
-  "meta": {
-    "name": "The Third Expansion"
-  }
+  meta: {
+    name: "The Third Expansion",
+  },
 }

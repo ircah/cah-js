@@ -35,5 +35,3 @@ exports.setup = function() {
 		console.log("[bot.js] %s leaves %s", evt.user.getNick(), evt.channel.getName());
 	});
 };
-
-/* vim: set ts=4 sw=4 sts=0 noet: */

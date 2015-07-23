@@ -1,14 +1,14 @@
 {
-  "name": "cah",
-  "version": "0.0.1",
-  "description": "Play Cards Against Humanity on IRC",
-  "main": "app.js",
-  "author": "ur mum",
-  "license": "MIT",
-  "dependencies": {
-    "underscore": "latest",
-    "coffea": "git://github.com/caffeinery/coffea.git"
-  },
-  "devDependencies": {
-  }
+	"name": "cah",
+	"version": "0.0.1",
+	"description": "Play Cards Against Humanity on IRC",
+	"main": "app.js",
+	"author": "ur mum",
+	"license": "MIT",
+	"dependencies": {
+		"coffea": "git://github.com/caffeinery/coffea.git",
+		"json5": "latest",
+		"underscore": "latest"
+	},
+	"devDependencies": {}
 }

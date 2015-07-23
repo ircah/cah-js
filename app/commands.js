@@ -16,5 +16,3 @@ exports.handle = function(evt, msg) {
 	else
 		console.log("[commands.js] unknown command: '!%s'", m[1]);
 };
-
-/* vim: set ts=4 sw=4 sts=0 noet: */
