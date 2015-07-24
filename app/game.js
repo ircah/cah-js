@@ -415,6 +415,28 @@ function _start_game(gameid)
 	_round(gameid);
 }
 
+function _split_card_list(cards) {
+	var lines, curLine, len;
+
+	lines = [];
+	curLine = ["Your cards:"];
+
+	while (cards.length > 0) {
+		if ((curLine.concat(cards[0]).join(" ")).length <= 380) {
+			curLine.push(cards.shift());
+		} else {
+			lines.push(curLine.join(" "));
+			curLine = [];
+		}
+	}
+
+	if (curLine) {
+		lines.push(curLine.join(" "));
+	}
+
+	return lines;
+}
+
 function _notice_cards(gameid, pl)
 {
 	if(!pl) {
@@ -431,7 +453,9 @@ function _notice_cards(gameid, pl)
 			cards.push(util.format("%s[%d]%s %s", client.format.bold, i+1, client.format.bold, card));
 		});
 		if(cards.length > 0)
-			global.client.notice(pl, "Your cards: " + cards.join(" "));
+			_.each(_split_card_list(cards), function (line) {
+				global.client.notice(pl, line);
+			});
 		else
 			global.client.notice(pl, "You don't have any cards.");
 	}
