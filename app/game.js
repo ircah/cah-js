@@ -214,6 +214,35 @@ function game_pick(gameid, user, cards)
 	}
 }
 
+function game_retract(gameid, user) {
+	if (!games[gameid].roundRunning)
+		return;
+	if(_.indexOf(games[gameid].players, user) == -1)
+		return;
+	if(user == games[gameid].czar)
+		return;
+	if(games[gameid].round_stage == 1)
+		return;
+	if(!games[gameid].hasPlayed[user]) {
+		return;
+	}
+
+	if(games[gameid].hasPlayed[user] > 1) {
+		var err;
+		if(games[gameid].hasPlayed[user] == 2)
+			err = "swapped cards";
+		else if(games[gameid].hasPlayed[user] == 3)
+			err = "just joined";
+		else if(games[gameid].hasPlayed[user] == 4)  // fpassed
+			err = "can't play";
+		return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, err));
+	}
+
+	delete games[gameid].hasPlayed[user];
+
+	global.client.notice(user, "You have retracted your pick.");
+}
+
 function game_show_points(gameid, show_all)
 {
 	var tmp, tmp2 = [];
@@ -816,6 +845,12 @@ function cmd_pick(evt, args) {
 	game_pick(evt.channel, evt.user, a);
 }
 
+function cmd_retract(evt, args) {
+	if(!games[evt.channel])
+		return;
+	game_retract(evt.channel, evt.user);
+}
+
 function cmd_points(evt, args) {
 	if(!games[evt.channel])
 		return;
@@ -893,6 +928,7 @@ exports.setup = function() {
 	global.commands.cards = cmd_cards;
 	global.commands.status = cmd_status;
 	global.commands.pick = cmd_pick;
+	global.commands.retract = cmd_retract;
 	global.commands.points = cmd_points;
 	global.commands.swap = cmd_swap;
 	// Aliases
