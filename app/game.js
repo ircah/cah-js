@@ -938,6 +938,7 @@ exports.setup = function() {
 	global.commands.q = cmd_leave;
 	global.commands.quit = cmd_leave;
 	global.commands.p = cmd_pick;
+	global.commands.r = cmd_retract;
 	global.commands.pts = cmd_points;
 	// Admin commands
 	global.commands.flimit = cmd_flimit;
