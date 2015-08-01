@@ -800,8 +800,11 @@ function cmd_stop(evt, args) {
 }
 
 function cmd_join(evt, args) {
-	if(!games[evt.channel])
+	if(!games[evt.channel]) {
 		cmd_start(evt, args);
+		if(!games[evt.channel]) // Abort if game was not started for some reason
+			return;
+	}
 	join_game(evt.channel, evt.user);
 }
 
