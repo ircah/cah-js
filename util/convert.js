@@ -1,4 +1,5 @@
 var fs = require('fs');
+var JSON5 = require('json5');
 var entities = new (require('html-entities').AllHtmlEntities)();
 
 function process_txt(text)
@@ -6,8 +7,8 @@ function process_txt(text)
 	var a;
 
 	a = text
-		//.replace(/<br>/g, "\u21b2")
 		.replace(/(?:<br>)+/g, " ")
+		//.replace(/<br>/g, "\u21b2") // alternative: replace newlines w/ newline symbol
 		.replace(/<(?:b|i|small)>([^<]+)<\/(?:b|i|small)>/g, "$1")
 	;
 	a = entities.decode(a);
@@ -17,8 +18,8 @@ function process_txt(text)
 
 process.argv = process.argv.slice(1);
 if(process.argv.length <= 2) {
-	console.log("Converts JSON files downloaded from http://www.crhallberg.com/cah/json");
-	console.log("Usage: " + process.argv[0] + " <input json> <output json>");
+	console.log("Converts JSON CAH sets downloaded from http://www.crhallberg.com/cah/json");
+	console.log("Usage: " + process.argv[0] + " <input json> <output json5>");
 	process.exit(1);
 }
 
@@ -55,12 +56,12 @@ for(var e in data.blackCards) {
 
 for(var e in data.whiteCards) {
 	e = data.whiteCards[e];
-	if(e.slice(-1) == '.')
+	if(e.slice(-1) == '.') // strip trailing dots
 		e = e.slice(0, -1);
 	out.answers.push(process_txt(e));
 	i++;
 }
 
-fs.writeFileSync(output_file, JSON.stringify(out));
+fs.writeFileSync(output_file, JSON5.stringify(out));
 
 console.log("Processed " + i + " cards!");
