@@ -223,9 +223,8 @@ function game_retract(gameid, user) {
 		return;
 	if(games[gameid].round_stage == 1)
 		return;
-	if(!games[gameid].hasPlayed[user]) {
+	if(!games[gameid].hasPlayed[user])
 		return;
-	}
 
 	if(games[gameid].hasPlayed[user] > 1) {
 		var err;
@@ -233,7 +232,7 @@ function game_retract(gameid, user) {
 			err = "swapped cards";
 		else if(games[gameid].hasPlayed[user] == 3)
 			err = "just joined";
-		else if(games[gameid].hasPlayed[user] == 4)  // fpassed
+		else if(games[gameid].hasPlayed[user] == 4)
 			err = "can't play";
 		return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, err));
 	}
@@ -290,6 +289,8 @@ function game_swap_cards(gameid, user) {
 	if(!games[gameid].roundRunning)
 		return;
 	if(_.indexOf(games[gameid].players, user) == -1)
+		return;
+	if(games[gameid].round_stage == 1)
 		return;
 	if(user == games[gameid].czar) {
 		return global.client.send(games[gameid].settings.channel, util.format("%s: The card czar can't swap cards.", user));
