@@ -89,7 +89,7 @@
     "Cloud-based business strategy",
     "Cloud 2.0",
     "The next Y2K",
-    "\"An army of chaos monkeys",
+    "\"An army of chaos monkeys\"",
     "A CORBA service written in Ada which communicates using JSONx",
     "A home-rolled systemd replacement",
     "A custom kernel with Frontpage Extensions installed",
@@ -153,7 +153,7 @@
     "ntpdate",
     "Systemd",
     "12 factor application",
-    "\"Fail early",
+    "\"Fail early\"",
     "Regex",
     "A violation of the most basic engineering principles.",
     "The BOFH",
@@ -215,7 +215,7 @@
     "A series of tubes",
     "secret sauce",
     "# What is this used for?",
-    "\"# FIXME: For now",
+    "\"# FIXME: For now\"",
     "ASAP",
     "Nagios",
     "The Goddamn CDN",
@@ -223,7 +223,7 @@
     "A cluster of applications on a cluster of servers",
     "Beating the server into submission with your bare hands.",
     "Read-only Fridays",
-    "r/sysadmin",
+    "/r/sysadmin",
     "Distributed Computing",
     "Sprint Planning",
     "Merge Conflicts",
@@ -234,12 +234,12 @@
     "Too big to fail",
     "NoQA Movement",
     "A few instances",
-    "operations hipster",
+    "Operations hipster",
     "Cowboy developer",
     "cubism farm",
     "HipChat",
     "An IRC bot written entirely in sed",
-    "(\u256f\u00b0\u25a1\u00b0\uff09\u256f\ufe35 \u253b\u2501\u253b",
+    "\uff08\u256f\u00b0\u25a1\u00b0\uff09\u256f\ufe35 \u253b\u2501\u253b",
     "works for me",
     "a torrent of Torrenters torrenting",
     "COBOL",
@@ -347,7 +347,7 @@
     "conflict minerals",
     "continuous incineration",
     "The gentle sound of weeping drifting from the server room",
-    "eventual consistency",
+    "Eventual consistency",
     "Microsoft\u00ae Azure",
     "Pinging the broadcast address",
     "That moment when you realize CTRL-Z cannot save you",
@@ -382,7 +382,7 @@
     "Paxos",
     "memegen",
     "Flynn",
-    "eventual persistence",
+    "Eventual persistence",
     "Jenkins",
     "Bingo Balls",
     "Mechanically Recovered Turkey",
@@ -400,7 +400,7 @@
     "Production deployments that depend on GitHub",
     "RFC 2324",
     "Your code featured on The Daily WTF.",
-    "optimistic transactions",
+    "Optimistic transactions",
     "Webscale",
     "Cats",
     "Ponies",
@@ -409,7 +409,7 @@
     "Picking the best color to paint your bike shed",
     "Server cages",
     "Copy-on-write",
-    "deduplication",
+    "Deduplication",
     "LART",
     "BOFH",
     "Program Management",
@@ -521,7 +521,7 @@
       "text": "\"%s is a feature, not a bug.\""
     },
     {
-      "text": "%s is for closers."
+      "text": "%s is for losers."
     },
     {
       "text": "%s is weaponized privilege."
@@ -1184,7 +1184,7 @@
       "text": "Richard Stallman will kill you with his teeth for %s."
     },
     {
-      "text": "DB tuning wiith %s."
+      "text": "DB tuning with %s."
     },
     {
       "text": "Can anyone help me get %s running on Cisco IOS?"
