@@ -329,7 +329,7 @@ function game_force_pass(gameid, user)
 	if(_.indexOf(games[gameid].players, user) == -1)
 		return;
 	if(user == games[gameid].czar)
-		return;
+		return _round(gameid);
 
 	games[gameid].hasPlayed[user] = 4;
 	_check_all_played(gameid);
