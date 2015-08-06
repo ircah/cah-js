@@ -521,6 +521,8 @@ function _round(gameid)
 	_refill_cards(gameid);
 	_notice_cards(gameid);
 	games[gameid].roundRunning = true;
+	if(games[gameid].timer_round)
+		clearTimeout(games[gameid].timer_round);
 	games[gameid].timer_round = setTimeout(function() { timer_round(gameid, 0); }, (ROUND_MAX_TIME_MINS - 1) * 60 * 1000);
 }
 
