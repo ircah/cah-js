@@ -8,14 +8,14 @@ function CardPool(collection) {
 	this.questionCards = cards.getQuestionCards(collection);
 	this.questionCardIndex = 0;
 
-	function reshuffleQuestionCards() {
+	var reshuffleQuestionCards = function() {
 		this.questionCards = _.shuffle(this.questionCards);
 		this.questionCardIndex = 0;
-	}
-	function reshuffleAnswerCards() {
+	}.bind(this);
+	var reshuffleAnswerCards = function() {
 		this.answerCards = _.shuffle(this.answerCards);
 		this.answerCardIndex = 0;
-	}
+	}.bind(this);
 	this.randomQuestionCard = function() {
 		var card = this.questionCards[this.questionCardIndex];
 		this.questionCardIndex++;
@@ -32,11 +32,10 @@ function CardPool(collection) {
 	}
 	this.reshuffleCards = function() {
 		reshuffleAnswerCards();
-		reshuffleQuestionCards()
+		reshuffleQuestionCards();
 	}
 
-	reshuffleQuestionCards();
-	reshuffleAnswerCards();
+	this.reshuffleCards();
 }
 
 exports.CardPool = CardPool;
