@@ -226,7 +226,7 @@ function game_retract(gameid, user) {
 	if(!games[gameid].hasPlayed[user])
 		return;
 
-	if(games[gameid].hasPlayed[user] > 1) {
+	if(games[gameid].hasPlayed[user] != 1) {
 		var err;
 		if(games[gameid].hasPlayed[user] == 2)
 			err = "swapped cards";
@@ -661,7 +661,7 @@ function timer_round(gameid, n) {
 			// Directly start a new round unless enough people have picked
 			if(_.size(games[gameid].picks) >= 2 && games[gameid].round_stage == 0) {
 				_.each(games[gameid].players, function(pl) {
-					if(games[gameid].picks[pl])
+					if(games[gameid].hasPlayed[pl])
 						return;
 					games[gameid].hasPlayed[pl] = 4;
 				});
