@@ -29,15 +29,15 @@ function load()
 			tmp = q.text;
 
 			if (q.pick === undefined) {
-				q.pick = 0;  // initialize
+				q.pick = 0;
 
-				while ((i = tmp.indexOf("%s")) !== -1) {
+				while ((i = tmp.indexOf("%s")) !== -1) { // count number of %s
 					q.pick++;
 					tmp = tmp.slice(i + 2);
 				}
 
 				if (q.pick === 0) {
-					q.pick = 1;  // default to pick 1 if no %s found and not explicitly specified
+					q.pick = 1;  // default to pick 1 if not explicitly specified and no %s found
 				}
 			}
 
@@ -92,6 +92,14 @@ exports.collectionInfo = function(coll) {
 
 exports.collectionExists = function(collection) {
 	return !!compiled_collections[collection];
+};
+
+exports.getQuestionCards = function(collection) {
+	return compiled_collections[collection].questions;
+};
+
+exports.getAnswerCards = function(collection) {
+	return compiled_collections[collection].answers;
 };
 
 exports.randomQuestionCard = function(collection) {

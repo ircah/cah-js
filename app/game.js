@@ -2,6 +2,7 @@ var _ = require('underscore');
 var util = require('util');
 
 var cards = require('./cards.js');
+var CardPool = require('./cardpool.js').CardPool;
 var games = {};
 
 // should this be in the config?
@@ -18,6 +19,7 @@ function start_game(gameid, settings) {
 	games[gameid].settings = settings;
 	games[gameid].players = [];
 	games[gameid].czar = null;
+	games[gameid].cardpool = new CardPool(settings.coll);
 	games[gameid].cards = {};
 	games[gameid].picks = {};
 	games[gameid].pickIds = {};
@@ -510,7 +512,7 @@ function _round(gameid)
 		games[gameid].round_no,
 		games[gameid].czar
 	));
-	games[gameid].q_card = cards.randomQuestionCard(games[gameid].settings.coll);
+	games[gameid].q_card = games[gameid].cardpool.randomQuestionCard();
 	global.client.send(games[gameid].settings.channel, util.format(
 		"%sCARD:%s %s %s",
 		global.client.format.bold,
@@ -608,11 +610,8 @@ function _check_plimit(gameid)
 
 function _refill_cards(gameid, pl)
 {
-	if(!pl) {
-		_.each(games[gameid].players, function(pl) { _refill_cards(gameid, pl); });
-		return;
-	}
-
+	if(!pl)
+		return _.each(games[gameid].players, function(pl) { _refill_cards(gameid, pl); });
 	var draw = 10;
 
 	if(games[gameid].q_card.pick > 2) {
@@ -622,7 +621,7 @@ function _refill_cards(gameid, pl)
 	if(!games[gameid].cards[pl])
 		games[gameid].cards[pl] = [];
 	while(games[gameid].cards[pl].length < draw)
-		games[gameid].cards[pl].push(cards.randomAnswerCard(games[gameid].settings.coll));
+		games[gameid].cards[pl].push(games[gameid].cardpool.randomAnswerCard());
 }
 
 /* timers */
