@@ -493,6 +493,16 @@ function _notice_cards(gameid, pl)
 	}
 }
 
+function _display_black_card(gameid) {
+	global.client.send(games[gameid].settings.channel, util.format(
+		"%sCARD:%s %s %s",
+		global.client.format.bold,
+		global.client.format.bold,
+		_format_card(games[gameid].q_card),
+		_format_card_opts(games[gameid].q_card)
+	));
+}
+
 function _round(gameid)
 {
 	var tmp;
@@ -513,13 +523,7 @@ function _round(gameid)
 		games[gameid].czar
 	));
 	games[gameid].q_card = games[gameid].cardpool.randomQuestionCard();
-	global.client.send(games[gameid].settings.channel, util.format(
-		"%sCARD:%s %s %s",
-		global.client.format.bold,
-		global.client.format.bold,
-		_format_card(games[gameid].q_card),
-		_format_card_opts(games[gameid].q_card)
-	));
+	_display_black_card(gameid);
 	_refill_cards(gameid);
 	_notice_cards(gameid);
 	games[gameid].roundRunning = true;
@@ -828,6 +832,12 @@ function cmd_cards(evt, args) {
 	game_notice_cards(evt.channel, evt.user);
 }
 
+function cmd_card(evt, args) {
+	if(!games[evt.channel])
+		return;
+	_display_black_card(evt.channel);
+}
+
 function cmd_status(evt, args) {
 	if(!games[evt.channel])
 		return;
@@ -931,6 +941,7 @@ exports.setup = function() {
 	global.commands.leave = cmd_leave;
 	global.commands.players = cmd_players;
 	global.commands.cards = cmd_cards;
+	global.commands.card = cmd_card;
 	global.commands.status = cmd_status;
 	global.commands.pick = cmd_pick;
 	global.commands.retract = cmd_retract;
