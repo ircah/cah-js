@@ -94,7 +94,8 @@ function leave_game(gameid, user)
 			global.client.send(games[gameid].settings.channel, "Looks like the czar left, nobody wins this round.");
 			_round(gameid);
 		} else {
-			_check_all_played(gameid);
+			if(games[gameid].round_stage == 0)
+				_check_all_played(gameid);
 		}
 	}
 }
