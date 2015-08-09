@@ -2,6 +2,7 @@ var _ = require('underscore');
 var util = require('util');
 
 var cards = require('./cards.js');
+var stats = require('./stats.js');
 var CardPool = require('./cardpool.js').CardPool;
 var games = {};
 
@@ -179,6 +180,16 @@ function game_pick(gameid, user, cards)
 			_format_card(games[gameid].q_card, games[gameid].picks[winner]),
 			++games[gameid].points[winner]
 		));
+		// stats
+		var tmp = [];
+		_.each(games[gameid].picks, function(pick, pl) {
+			tmp.push({
+				text: pick,
+				playedBy: pl,
+				won: (winner == pl)
+			});
+		});
+		stats.cardsPlayed(tmp);
 
 		games[gameid].roundRunning = false;
 		clearTimeout(games[gameid].timer_round);
@@ -439,6 +450,8 @@ function _start_game(gameid)
 		clearTimeout(games[gameid].timer_stop);
 		games[gameid].timer_stop = null;
 	}
+	// stats
+	stats.gameStarted({id: gameid});
 	global.client.send(games[gameid].settings.channel, util.format(
 		"Starting %s with '%s' cards: %s",
 		games[gameid].settings.plimit > 0 ? util.format("a game till %d points", games[gameid].settings.plimit) : "an infinite game",
@@ -589,6 +602,21 @@ function _check_plimit(gameid)
 			"Sorry to ruin the fun, but that was the last round of the game! %s!",
 			tmp
 		));
+		// stats
+		var tmp = [];
+		_.each(games[gameid].points, function(pts, pl) {
+			tmp.push({
+				name: pl,
+				points: pts,
+				won: (_.indexOf(won, pl) != -1)
+			});
+		});
+		stats.gameEnded({
+				collection: games[gameid].settings.coll,
+				round_no: games[gameid].round_no,
+				point_limit: games[gameid].settings.plimit,
+				id: gameid
+		}, tmp);
 
 		game_show_points(gameid, true);
 		return stop_game(gameid);
@@ -605,6 +633,22 @@ function _check_plimit(gameid)
 				pl,
 				games[gameid].settings.plimit
 			));
+			// stats
+			var tmp = [];
+			_.each(games[gameid].points, function(pts, pl) {
+				tmp.push({
+					name: pl,
+					points: pts,
+					won: (pts == games[gameid].settings.plimit)
+				});
+			});
+			stats.gameEnded({
+				collection: games[gameid].settings.coll,
+				round_no: games[gameid].round_no,
+				point_limit: games[gameid].settings.plimit,
+				num_players: _.size(games[gameid].players),
+				id: gameid
+			}, tmp);
 			game_show_points(gameid, true);
 			stop_game(gameid);
 			r = true;
@@ -933,7 +977,6 @@ function cmd_fleave(evt, args) {
 	game_force_leave(evt.channel, args.trim());
 }
 
-
 exports.setup = function() {
 	// Normal commands
 	global.commands.start = cmd_start;
@@ -964,4 +1007,5 @@ exports.setup = function() {
 	global.commands.fleave = cmd_fleave;
 
 	cards.setup();
+	stats.setup();
 };
