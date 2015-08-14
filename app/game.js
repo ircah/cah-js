@@ -8,8 +8,8 @@ var games = {};
 // should this be in the config?
 var INITIAL_WAIT_SECS = 60;
 var NOT_ENOUGH_PLAYERS_WAIT_MINS = 2;
-var ROUND_MAX_TIME_MINS = 4;
-var ROUND_TIMEOUT_CZAR_TIME_MINS = 2; // how many minutes the czar gets after "Time's up." happens and the round is forced into the "czar select winner" stage
+var ROUND_MAX_PLAY_TIME_MINS = 2; // how many minutes the players get to pick
+var ROUND_MAX_CZAR_TIME_MINS = 2; // how many minutes the czar gets to pick
 var SWAP_MIN_PLAYERS = 5;
 
 /* "external" game functions */
@@ -530,7 +530,7 @@ function _round(gameid)
 	games[gameid].roundRunning = true;
 	if(games[gameid].timer_round)
 		clearTimeout(games[gameid].timer_round);
-	games[gameid].timer_round = setTimeout(function() { timer_round(gameid, 0); }, (ROUND_MAX_TIME_MINS - 1) * 60 * 1000);
+	games[gameid].timer_round = setTimeout(function() { timer_round(gameid, 0); }, (ROUND_MAX_PLAY_TIME_MINS - 1) * 60 * 1000);
 }
 
 function _check_all_played(gameid)
@@ -564,6 +564,8 @@ function _check_all_played(gameid)
 		});
 
 		games[gameid].round_stage = 1;
+		clearTimeout(games[gameid].timer_round);
+		games[gameid].timer_round = setTimeout(function() { timer_round(gameid, 0); }, (ROUND_MAX_CZAR_TIME_MINS - 1) * 60 * 1000);
 		global.client.send(games[gameid].settings.channel, util.format("%s: Select the winner using !pick", games[gameid].czar));
 	}
 }
@@ -672,7 +674,6 @@ function timer_round(gameid, n) {
 					games[gameid].hasPlayed[pl] = 4;
 				});
 				_check_all_played(gameid);
-				games[gameid].timer_round = setTimeout(function() { timer_round(gameid, 0); }, (ROUND_TIMEOUT_CZAR_TIME_MINS - 1) * 60 * 1000);
 			} else {
 				_round(gameid);
 			}
