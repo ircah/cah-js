@@ -104,6 +104,8 @@
     "A woman scorned",
   ],
   meta: {
-    name: "The First Expansion",
+    name: "CAH First Expansion",
+    url: "https://cardsagainsthumanity.com/",
+    license: "CC BY-NC-SA 2.0",
   },
 }

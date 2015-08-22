@@ -104,6 +104,8 @@
     "No longer finding any Cards Against Humanity card funny",
   ],
   meta: {
-    name: "The Sixth Expansion",
+    name: "CAH Sixth Expansion",
+    url: "https://cardsagainsthumanity.com/",
+    license: "CC BY-NC-SA 2.0",
   },
 }

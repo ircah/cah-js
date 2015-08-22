@@ -560,6 +560,8 @@
     "Throwing a virgin into a volcano",
   ],
   meta: {
-    name: "Base Set",
+    name: "CAH Base Set",
+    url: "https://cardsagainsthumanity.com/",
+    license: "CC BY-NC-SA 2.0",
   },
 }

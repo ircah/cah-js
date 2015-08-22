@@ -104,6 +104,8 @@
     "Lots and lots of abortions",
   ],
   meta: {
-    name: "The Fourth Expansion",
+    name: "CAH Fourth Expansion",
+    url: "https://cardsagainsthumanity.com/",
+    license: "CC BY-NC-SA 2.0",
   },
 }

@@ -104,6 +104,8 @@
     "A PowerPoint presentation",
   ],
   meta: {
-    name: "The Third Expansion",
+    name: "CAH Third Expansion",
+    url: "https://cardsagainsthumanity.com/",
+    license: "CC BY-NC-SA 2.0",
   },
 }
