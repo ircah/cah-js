@@ -11,5 +11,7 @@ indent_style = tab
 indent_size = 4
 
 [*.{json,json5}]
-indent_style = tab
+indent_style = space
 indent_size = 2
+# This is to be able to easily notice a tab in a space-indented file.
+tab_width = 8
