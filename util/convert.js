@@ -2,6 +2,20 @@ var fs = require('fs');
 var JSON5 = require('json5');
 var entities = new (require('html-entities').AllHtmlEntities)();
 
+
+// amount of non-overlapping matches for <search> in <string>
+// e.g. count_in_string("ssss", "ss") -> 2
+function count_in_string(string, search)
+{
+	var ctr, i;
+	ctr = 0;
+	i = -search.length; // start from 0
+	while((i = string.indexOf(search, i + search.length)) !== -1) {
+		ctr++;
+	}
+	return ctr;
+}
+
 function process_txt(text)
 {
 	var a;
@@ -48,7 +62,7 @@ for(var e in data.blackCards) {
 
 	tmp.text = process_txt(e.text.replace(/_/g, "%s"));
 
-	if(e.pick != 1)
+	if(e.pick != 1 && count_in_string(tmp.text, "%s") != e.pick)
 		tmp.pick = e.pick;
 	out.questions.push(tmp);
 	i++;
@@ -62,6 +76,6 @@ for(var e in data.whiteCards) {
 	i++;
 }
 
-fs.writeFileSync(output_file, JSON5.stringify(out));
+fs.writeFileSync(output_file, JSON5.stringify(out, null, 2));
 
 console.log("Processed " + i + " cards!");
