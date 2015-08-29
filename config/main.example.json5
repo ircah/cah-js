@@ -17,8 +17,8 @@
   voice_players: true,
   collections: {
     base: ["base_set"],
-    extended_pure: ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion"],
-    extended: ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion", "irc-against-humanity/irc-against-humanity"],
+    extended_pure: ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion", "purple_expansion"],
+    extended: ["base_set", "1st_expansion", "2nd_expansion", "3rd_expansion", "4th_expansion", "5th_expansion", "6th_expansion", "purple_expansion", "irc-against-humanity/irc-against-humanity"],
     devops: ["devops_against_humanity"],
     anime: ["anime"],
   },
