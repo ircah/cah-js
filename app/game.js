@@ -763,7 +763,7 @@ function prettyList(array) {
 	return ret;
 }
 
-/* commands */
+/* IRC commands */
 
 function cmd_start(evt, args) {
 	if(games[evt.channel])
@@ -935,34 +935,36 @@ function cmd_fleave(evt, args) {
 }
 
 
-exports.setup = function() {
+exports.setup = function(cmdreg) {
+	var commands = {};
 	// Normal commands
-	global.commands.start = cmd_start;
-	global.commands.stop = cmd_stop;
-	global.commands.join = cmd_join;
-	global.commands.leave = cmd_leave;
-	global.commands.players = cmd_players;
-	global.commands.cards = cmd_cards;
-	global.commands.card = cmd_card;
-	global.commands.status = cmd_status;
-	global.commands.pick = cmd_pick;
-	global.commands.retract = cmd_retract;
-	global.commands.points = cmd_points;
-	global.commands.swap = cmd_swap;
+	commands.start = cmd_start;
+	commands.stop = cmd_stop;
+	commands.join = cmd_join;
+	commands.leave = cmd_leave;
+	commands.players = cmd_players;
+	commands.cards = cmd_cards;
+	commands.card = cmd_card;
+	commands.status = cmd_status;
+	commands.pick = cmd_pick;
+	commands.retract = cmd_retract;
+	commands.points = cmd_points;
+	commands.swap = cmd_swap;
 	// Aliases
-	global.commands.s = cmd_start;
-	global.commands.j = cmd_join;
-	global.commands.l = cmd_leave;
-	global.commands.q = cmd_leave;
-	global.commands.quit = cmd_leave;
-	global.commands.p = cmd_pick;
-	global.commands.r = cmd_retract;
-	global.commands.pts = cmd_points;
+	commands.s = cmd_start;
+	commands.j = cmd_join;
+	commands.l = cmd_leave;
+	commands.q = cmd_leave;
+	commands.quit = cmd_leave;
+	commands.p = cmd_pick;
+	commands.r = cmd_retract;
+	commands.pts = cmd_points;
 	// Admin commands
-	global.commands.flimit = cmd_flimit;
-	global.commands.fpass = cmd_fpass;
-	global.commands.flastround = cmd_flastround;
-	global.commands.fleave = cmd_fleave;
+	commands.flimit = cmd_flimit;
+	commands.fpass = cmd_fpass;
+	commands.flastround = cmd_flastround;
+	commands.fleave = cmd_fleave;
 
+	cmdreg.register(commands);
 	cards.setup();
 };

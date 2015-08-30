@@ -9,7 +9,7 @@ exports.setup = function() {
 	var client = coffea(config.irc);
 	global.client = client;
 	commands.setup();
-	game.setup();
+	game.setup(commands);
 
 	client.on("motd", function(motd) {
 		console.log("[bot.js] MOTD arrived");
@@ -24,7 +24,7 @@ exports.setup = function() {
 		evt2.reply = function(a) { return evt.reply(a); }
 		evt2.has_op = (evt.channel.names[evt.user.getNick()] == "@");
 		evt2.has_voice = (evt.channel.names[evt.user.getNick()] == "+");
-		commands.handle(evt2, evt.message);
+		commands._handle(evt2, evt.message);
 	});
 
 	client.on("join", function(evt) {
