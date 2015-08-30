@@ -934,6 +934,29 @@ function cmd_fleave(evt, args) {
 	game_force_leave(evt.channel, args.trim());
 }
 
+/* IRC events */
+
+function evt_part(evt) {
+	if(!games[evt.channel])
+		return;
+	leave_game(evt.channel, evt.user);
+}
+
+function evt_quit(evt) {
+	// quitting is not specific to any channel so we need to check each one
+	_.each(global.config.channels, function(channel) {
+		if(!games[channel])
+			return;
+		leave_game(channel, evt.user);
+	});
+}
+
+function evt_kick(evt) {
+	if(!games[evt.channel])
+		return;
+	leave_game(evt.channel, evt.kicked);
+}
+
 
 exports.setup = function(cmdreg) {
 	var commands = {};
@@ -966,5 +989,8 @@ exports.setup = function(cmdreg) {
 	commands.fleave = cmd_fleave;
 
 	cmdreg.register(commands);
+	cmdreg.onPart(evt_part);
+	cmdreg.onQuit(evt_quit);
+	cmdreg.onKick(evt_kick);
 	cards.setup();
 };

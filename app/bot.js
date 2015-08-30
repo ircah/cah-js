@@ -33,5 +33,29 @@ exports.setup = function() {
 
 	client.on("part", function(evt) {
 		console.log("[bot.js] %s leaves %s", evt.user.getNick(), evt.channel.getName());
+		var evt2 = {};
+		evt2.user = evt.user.getNick();
+		evt2.channel = evt.channel.getName();
+		commands._eventPart(evt2);
+	});
+	
+	client.on('quit', function(evt) {
+    	console.log("[bot.js] %s quit from IRC", evt.user.getNick());
+    	var evt2 = {};
+    	evt2.user = evt.user.getNick();
+    	commands._eventQuit(evt2);
+	});
+
+	client.on('kick', function(evt) {
+		console.log("[bot.js] %s was kicked from %s by %s", evt.user.getNick(), evt.channel.getName(), evt.by.getNick());
+		var evt2 = {};
+		evt2.kicker = evt.by.getNick();
+		evt2.kicked = evt.user.getNick();
+		evt2.channel = evt.channel.getName();
+		commands._eventKick(evt2);
+	});
+
+	client.on('nick', function(evt) {
+    	console.log("[bot.js] %s changes nick to %s", evt.oldNick, evt.user.getNick());
 	});
 };
