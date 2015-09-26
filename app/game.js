@@ -84,6 +84,8 @@ function leave_game(gameid, user)
 	if(global.config.voice_players)
 		ircDevoice(global.client, games[gameid].settings.channel, [user]);
 	games[gameid].players = _.without(games[gameid].players, user);
+	if(games[gameid].players.length == 0)
+		return stop_game(gameid);
 	if(!_check_players(gameid, user))
 		return;
 	if(games[gameid].roundRunning) {
