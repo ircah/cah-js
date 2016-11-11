@@ -13,377 +13,598 @@ var ROUND_MAX_PLAY_TIME_MINS = 2; // how many minutes the players get to pick
 var ROUND_MAX_CZAR_TIME_MINS = 2; // how many minutes the czar gets to pick
 var SWAP_MIN_PLAYERS = 5;
 
-/* "external" game functions */
 
-function start_game(gameid, settings) {
-	games[gameid] = {};
-	games[gameid].settings = settings;
-	games[gameid].players = [];
-	games[gameid].czar = null;
-	games[gameid].cardpool = new CardPool(settings.coll);
-	games[gameid].cards = {};
-	games[gameid].picks = {};
-	games[gameid].pickIds = {};
-	games[gameid].hasPlayed = {}; // 1 -> player played, 2 -> player swapped, 3 -> player just joined and can't play, 4 -> didn't play cause other reason
-	games[gameid].pick_order = []; // order in which answers were displayed to the czar
-	games[gameid].timer_start = new Timer(INITIAL_WAIT_SECS);
-	games[gameid].timer_stop = new Timer(NOT_ENOUGH_PLAYERS_WAIT_MINS * 60);
-	games[gameid].timer_round = // multi-purpose, must be started with .resumeFrom() instead of .start()
-		new Timer(_.max([ROUND_MAX_PLAY_TIME_MINS, ROUND_MAX_CZAR_TIME_MINS]) * 60);
-	games[gameid].roundRunning = false;
-	games[gameid].round_no = 0; // incremented to 1 in _round()
-	games[gameid].q_card = null;
-	games[gameid].round_stage = 0; // 0 -> waiting for players to play, 1 -> waiting for czar to pick winner
-	games[gameid].points = {};
-	games[gameid].last_round = -1; // if game reaches this round no, it will end
+class Game {
+	/* public methods */
 
-	games[gameid].timer_start.onElapsed(_timer_start.bind(null, gameid));
-	games[gameid].timer_stop.onElapsed(_timer_stop.bind(null, gameid));
-	games[gameid].timer_round.on(-60, _timer_round_1min.bind(null, gameid));
-	games[gameid].timer_round.on(-30, _timer_round_30sec.bind(null, gameid));
-	games[gameid].timer_round.on(-10, _timer_round_10sec.bind(null, gameid));
-	games[gameid].timer_round.onElapsed(_timer_round_elapsed.bind(null, gameid));
+	constructor(settings, on_stop) { // creating a game starts it
+		this.settings = settings;
+		this.players = [];
+		this.czar = null;
+		this.cardpool = new CardPool(settings.coll);
+		this.cards = {};
+		this.picks = {};
+		this.pickIds = {};
+		this.hasPlayed = {}; // 1 -> player played, 2 -> player swapped, 3 -> player just joined and can't play, 4 -> didn't play cause other reason
+		this.pick_order = []; // order in which answers were displayed to the czar
+		this.timer_start = new Timer(INITIAL_WAIT_SECS);
+		this.timer_stop = new Timer(NOT_ENOUGH_PLAYERS_WAIT_MINS * 60);
+		this.timer_round = // multi-purpose, must be started with .resumeFrom() instead of .start()
+			new Timer(_.max([ROUND_MAX_PLAY_TIME_MINS, ROUND_MAX_CZAR_TIME_MINS]) * 60);
+		this.roundRunning = false;
+		this.round_no = 0; // incremented to 1 in _round()
+		this.q_card = null;
+		this.round_stage = 0; // 0 -> waiting for players to play, 1 -> waiting for czar to pick winner
+		this.points = {};
+		this.last_round = -1; // if game reaches this round no, it will end
+		this.on_stop = on_stop; // called when game is stopped, can be used to manage global state
 
-	games[gameid].timer_start.start();
-	global.client.send(settings.channel, util.format(
-		"Starting a new game of %sCards Against Humanity%s. The game will start in %d seconds, type !join to join.",
-		global.client.format.bold,
-		global.client.format.bold,
-		INITIAL_WAIT_SECS
-	));
-}
+		this.timer_start.onElapsed(this._timer_start.bind(this));
+		this.timer_stop.onElapsed(this._timer_stop.bind(this));
+		this.timer_round.on(-60, this._timer_round_1min.bind(this));
+		this.timer_round.on(-30, this._timer_round_30sec.bind(this));
+		this.timer_round.on(-10, this._timer_round_10sec.bind(this));
+		this.timer_round.onElapsed(this._timer_round_elapsed.bind(this));
 
-function stop_game(gameid, user) {
-	if(user && games[gameid].settings.starter != user)
-		return false;
-	global.client.send(games[gameid].settings.channel, "Game stopped.");
-	if(global.config.voice_players)
-		ircDevoice(global.client, games[gameid].settings.channel, games[gameid].players);
-
-	games[gameid].timer_start.stop();
-	games[gameid].timer_stop.stop();
-	games[gameid].timer_round.stop();
-	games[gameid] = undefined;
-	return true;
-}
-
-function join_game(gameid, user)
-{
-	if(_.indexOf(games[gameid].players, user) != -1)
-		return;
-	games[gameid].players.push(user);
-	if(games[gameid].points[user] === undefined)
-		games[gameid].points[user] = 0;
-	games[gameid].hasPlayed[user] = 3;
-	global.client.send(games[gameid].settings.channel, user + " joined the game.");
-	if(global.config.voice_players)
-		ircVoice(global.client, games[gameid].settings.channel, [user]);
-	if(games[gameid].players.length >= 3 && !games[gameid].roundRunning) {
-		_start_game(gameid);
-	}
-}
-
-function leave_game(gameid, user)
-{
-	if(_.indexOf(games[gameid].players, user) == -1)
-		return;
-	global.client.send(games[gameid].settings.channel, user + " left the game.");
-	if(global.config.voice_players)
-		ircDevoice(global.client, games[gameid].settings.channel, [user]);
-	games[gameid].players = _.without(games[gameid].players, user);
-	if(games[gameid].players.length == 0)
-		return stop_game(gameid);
-	if(!_check_players(gameid, user))
-		return;
-	if(games[gameid].roundRunning) {
-		// Abort the round if the czar left, otherwise check whether everyone has played
-		//  (now that a person has left)
-		if(user == games[gameid].czar) {
-			games[gameid].timer_round.stop();
-			global.client.send(games[gameid].settings.channel, "Looks like the czar left, nobody wins this round.");
-			_round(gameid);
-		} else {
-			if(games[gameid].round_stage == 0)
-				_check_all_played(gameid);
-		}
-	}
-}
-
-function game_get_players(gameid)
-{
-	return games[gameid].players;
-}
-
-function game_notice_cards(gameid, user)
-{
-	if(!games[gameid].roundRunning)
-		return;
-	if(_.indexOf(games[gameid].players, user) == -1)
-		return;
-	if(user == games[gameid].czar)
-		return;
-	_notice_cards(gameid, user);
-}
-
-function game_show_status(gameid)
-{
-	if(!games[gameid].roundRunning)
-	{
-		global.client.send(games[gameid].settings.channel, util.format(
-			"%sStatus:%s No round running.",
+		this.timer_start.start();
+		global.client.send(settings.channel, util.format(
+			"Starting a new game of %sCards Against Humanity%s. The game will start in %d seconds, type !join to join.",
 			global.client.format.bold,
-			global.client.format.bold
+			global.client.format.bold,
+			INITIAL_WAIT_SECS
 		));
-		return;
-	} else if(games[gameid].round_stage == 1) {
-		global.client.send(games[gameid].settings.channel, util.format(
-			"%sStatus:%s Waiting for %s to pick a winner.",
-			global.client.format.bold,
-			global.client.format.bold,
-			games[gameid].czar
-		));
-		return;
 	}
-	var tmp = games[gameid].players;
 
-	_.each(games[gameid].hasPlayed, function(_trash, player) {
-		tmp = _.without(tmp, player);
-	});
-	tmp = _.without(tmp, games[gameid].czar);
+	stop(user) {
+		if(user && this.settings.starter != user)
+			return false;
+		global.client.send(this.settings.channel, "Game stopped.");
+		if(global.config.voice_players)
+			ircDevoice(global.client, this.settings.channel, this.players);
 
-	global.client.send(games[gameid].settings.channel, util.format(
-		"%sStatus:%s %s is the card czar. Waiting for players to play: %s",
-		global.client.format.bold,
-		global.client.format.bold,
-		games[gameid].czar,
-		prettyList(tmp)
-	));
-}
+		this.timer_start.stop();
+		this.timer_stop.stop();
+		this.timer_round.stop();
+		if(this.on_stop !== undefined)
+			this.on_stop();
+		return true;
+	}
 
-function game_pick(gameid, user, cards)
-{
-	if(!games[gameid].roundRunning)
-		return;
-	if(_.indexOf(games[gameid].players, user) == -1)
-		return;
-	if(user == games[gameid].czar) {
-		if(games[gameid].round_stage === 0)
-			return global.client.send(games[gameid].settings.channel, util.format("%s: The czar does not play yet.", user));
-		var winner;
-
-		if(cards.length != 1) {
-			global.client.send(games[gameid].settings.channel, "You need to select a winner.");
+	join(user) {
+		if(_.indexOf(this.players, user) != -1)
 			return;
-		}
-		if(cards[0] < 1 || cards[0] > games[gameid].pick_order.length) {
-			global.client.send(games[gameid].settings.channel, "Invalid winner.");
+		this.players.push(user);
+		if(this.points[user] === undefined)
+			this.points[user] = 0;
+		this.hasPlayed[user] = 3;
+		global.client.send(this.settings.channel, user + " joined the game.");
+		if(global.config.voice_players)
+			ircVoice(global.client, this.settings.channel, [user]);
+		if(this.players.length >= 3 && !this.roundRunning)
+			this._start_game();
+	}
+
+	leave(user) {
+		if(_.indexOf(this.players, user) == -1)
 			return;
-		}
-		winner = games[gameid].pick_order[cards[0] - 1];
-		global.client.send(games[gameid].settings.channel, util.format(
-			"%sWinner is:%s %s with \"%s\", gets one awesome point and has %d awesome points!",
-			global.client.format.bold,
-			global.client.format.bold,
-			winner,
-			_format_card(games[gameid].q_card, games[gameid].picks[winner]),
-			++games[gameid].points[winner]
-		));
-
-		games[gameid].roundRunning = false;
-		games[gameid].timer_round.stop();
-		if(_check_plimit(gameid))
-			return; // Game ended
-		_round(gameid);
-	} else {
-		if(games[gameid].round_stage == 1)
+		global.client.send(this.settings.channel, user + " left the game.");
+		if(global.config.voice_players)
+			ircDevoice(global.client, this.settings.channel, [user]);
+		this.players = _.without(this.players, user);
+		if(this.players.length == 0)
+			return this.stop();
+		if(!this._check_players(user))
 			return;
-		else if(games[gameid].hasPlayed[user] > 1) {
-			var err;
-			if(games[gameid].hasPlayed[user] == 2)
-				err = "swapped cards";
-			else if(games[gameid].hasPlayed[user] == 3)
-				err = "just joined";
-			else if(games[gameid].hasPlayed[user] == 4)  // fpassed
-				err = "can't play";
-			return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, err));
-		}
-		if(cards.length != games[gameid].q_card.pick)
-			return global.client.send(games[gameid].settings.channel, util.format("You need to pick %d cards.", games[gameid].q_card.pick));
-		if(cards.length != _.uniq(cards).length)
-			return global.client.send(games[gameid].settings.channel, "You can't pick a card more than once.");
-		if(_.min(cards) < 1 || _.max(cards) > games[gameid].cards[user].length)
-			return global.client.send(games[gameid].settings.channel, "Invalid cards selected.");
-		cards = _.map(cards, function(n) { return n - 1; });
-		var pick = [];
-		_.each(cards, function(card_idx) {
-			pick.push(games[gameid].cards[user][card_idx]);
-		});
-		games[gameid].hasPlayed[user] = 1;
-		games[gameid].pickIds[user] = cards;
-		games[gameid].picks[user] = pick;
-		global.client.notice(user, util.format("You played: %s", _format_card(games[gameid].q_card, pick)));
-		_check_all_played(gameid);
-	}
-}
-
-function game_retract(gameid, user) {
-	if (!games[gameid].roundRunning)
-		return;
-	if(_.indexOf(games[gameid].players, user) == -1)
-		return;
-	if(user == games[gameid].czar)
-		return;
-	if(games[gameid].round_stage == 1)
-		return;
-	if(!games[gameid].hasPlayed[user])
-		return;
-
-	if(games[gameid].hasPlayed[user] != 1) {
-		var err;
-		if(games[gameid].hasPlayed[user] == 2)
-			err = "swapped cards";
-		else if(games[gameid].hasPlayed[user] == 3)
-			err = "just joined";
-		else if(games[gameid].hasPlayed[user] == 4)
-			err = "can't play";
-		return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, err));
-	}
-
-	delete games[gameid].hasPlayed[user];
-
-	global.client.notice(user, "You have retracted your pick.");
-}
-
-function game_show_points(gameid, show_all)
-{
-	var tmp, tmp2 = [];
-	var out = "";
-	var prev_pts = -1;
-
-	if(show_all) {
-		tmp = games[gameid].points;
-	} else {
-		tmp = {};
-		_.each(games[gameid].points, function(_trash, player) {
-			if(_.indexOf(games[gameid].players, player) != -1)
-				tmp[player] = games[gameid].points[player];
-		});
-	}
-	tmp = _.map(tmp, function(pts, pl) {
-		return {name: pl, points: pts};
-	});
-	tmp = _.sortBy(tmp, function(a) {
-		return -a.points;
-	});
-
-	_.each(tmp, function(o) {
-		if(prev_pts != o.points) {
-			if(prev_pts != -1) {
-				out += util.format("%s (%d awesome points); ", prettyList(tmp2), prev_pts);
-				tmp2 = [];
+		if(this.roundRunning) {
+			// Abort the round if the czar left, otherwise check whether everyone has played
+			//  (now that a person has left)
+			if(user == this.czar) {
+				this.timer_round.stop();
+				global.client.send(this.settings.channel, "Looks like the czar left, nobody wins this round.");
+				this._round();
+			} else {
+				if(this.round_stage == 0)
+					this._check_all_played();
 			}
-			prev_pts = o.points;
 		}
-		tmp2.push(o.name);
-	});
-	out += util.format("%s (%d awesome points)", prettyList(tmp2), prev_pts);
+	}
 
-	global.client.send(games[gameid].settings.channel, util.format(
-		"Point limit is %s%d%s. The most horrible people: %s",
-		global.client.format.bold,
-		games[gameid].settings.plimit,
-		global.client.format.bold,
-		out
-	));
-}
+	get_players() {
+		return this.players;
+	}
 
-function game_swap_cards(gameid, user) {
-	if(!games[gameid].roundRunning)
-		return;
-	if(_.indexOf(games[gameid].players, user) == -1)
-		return;
-	if(games[gameid].round_stage == 1)
-		return;
-	if(user == games[gameid].czar) {
-		return global.client.send(games[gameid].settings.channel, util.format("%s: The card czar can't swap cards.", user));
-	} else if(games[gameid].players.length < SWAP_MIN_PLAYERS) {
-		return global.client.send(games[gameid].settings.channel, util.format("%s: There must be at least %d players to use !swap.", user, SWAP_MIN_PLAYERS));
-	} else if(games[gameid].hasPlayed[user] > 1) {
+	notice_cards(user) {
+		if(!this.roundRunning)
+			return;
+		if(_.indexOf(this.players, user) == -1)
+			return;
+		if(user == this.czar)
+			return;
+		this._notice_cards(user);
+	}
+
+	show_status() {
+		if(!this.roundRunning) {
+			global.client.send(this.settings.channel, util.format(
+				"%sStatus:%s No round running.",
+				global.client.format.bold,
+				global.client.format.bold
+			));
+			return;
+		} else if(this.round_stage == 1) {
+			global.client.send(this.settings.channel, util.format(
+				"%sStatus:%s Waiting for %s to pick a winner.",
+				global.client.format.bold,
+				global.client.format.bold,
+				this.czar
+			));
+			return;
+		}
+		var tmp = this.players;
+
+		_.each(this.hasPlayed, function(_trash, player) {
+			tmp = _.without(tmp, player);
+		});
+		tmp = _.without(tmp, this.czar);
+
+		global.client.send(this.settings.channel, util.format(
+			"%sStatus:%s %s is the card czar. Waiting for players to play: %s",
+			global.client.format.bold,
+			global.client.format.bold,
+			this.czar,
+			prettyList(tmp)
+		));
+	}
+
+	show_question_card() {
+		if(!this.roundRunning)
+			return;
+		this._display_black_card();
+	}
+
+	pick(user, cards) {
+		if(!this.roundRunning)
+			return;
+		if(_.indexOf(this.players, user) == -1)
+			return;
+		if(user == this.czar) {
+			if(this.round_stage === 0)
+				return global.client.send(this.settings.channel, util.format("%s: The czar does not play yet.", user));
+			var winner;
+
+			if(cards.length != 1) {
+				global.client.send(this.settings.channel, "You need to select a winner.");
+				return;
+			}
+			if(cards[0] < 1 || cards[0] > this.pick_order.length) {
+				global.client.send(this.settings.channel, "Invalid winner.");
+				return;
+			}
+			winner = this.pick_order[cards[0] - 1];
+			global.client.send(this.settings.channel, util.format(
+				"%sWinner is:%s %s with \"%s\", gets one awesome point and has %d awesome points!",
+				global.client.format.bold,
+				global.client.format.bold,
+				winner,
+				_format_card(this.q_card, this.picks[winner]),
+				++this.points[winner]
+			));
+
+			this.roundRunning = false;
+			this.timer_round.stop();
+			if(this._check_plimit())
+				return; // Game ended
+			this._round();
+		} else {
+			if(this.round_stage == 1)
+				return;
+			else if(this.hasPlayed[user] > 1) {
+				var err;
+				if(this.hasPlayed[user] == 2)
+					err = "swapped cards";
+				else if(this.hasPlayed[user] == 3)
+					err = "just joined";
+				else if(this.hasPlayed[user] == 4)  // fpassed
+					err = "can't play";
+				return global.client.send(this.settings.channel, util.format("%s: You %s this round.", user, err));
+			}
+			if(cards.length != this.q_card.pick)
+				return global.client.send(this.settings.channel, util.format("You need to pick %d cards.", this.q_card.pick));
+			if(cards.length != _.uniq(cards).length)
+				return global.client.send(this.settings.channel, "You can't pick a card more than once.");
+			if(_.min(cards) < 1 || _.max(cards) > this.cards[user].length)
+				return global.client.send(this.settings.channel, "Invalid cards selected.");
+			cards = _.map(cards, function(n) { return n - 1; });
+			var pick = [];
+			_.each(cards, function(card_idx) {
+				pick.push(this.cards[user][card_idx]);
+			}, this);
+			this.hasPlayed[user] = 1;
+			this.pickIds[user] = cards;
+			this.picks[user] = pick;
+			global.client.notice(user, util.format("You played: %s", _format_card(this.q_card, pick)));
+			this._check_all_played();
+		}
+	}
+
+	retract(user) {
+		if (!this.roundRunning)
+			return;
+		if(_.indexOf(this.players, user) == -1)
+			return;
+		if(user == this.czar)
+			return;
+		if(this.round_stage == 1)
+			return;
+		if(!this.hasPlayed[user])
+			return;
+
+		if(this.hasPlayed[user] != 1) {
+			var err;
+			if(this.hasPlayed[user] == 2)
+				err = "swapped cards";
+			else if(this.hasPlayed[user] == 3)
+				err = "just joined";
+			else if(this.hasPlayed[user] == 4)
+				err = "can't play";
+			return global.client.send(this.settings.channel, util.format("%s: You %s this round.", user, err));
+		}
+
+		delete this.hasPlayed[user];
+
+		global.client.notice(user, "You have retracted your pick.");
+	}
+
+	show_points(show_all) {
+		var tmp, tmp2 = [];
+		var out = "";
+		var prev_pts = -1;
+
+		if(show_all) {
+			tmp = this.points;
+		} else {
+			tmp = {};
+			_.each(this.points, function(_trash, player) {
+				if(_.indexOf(this.players, player) != -1)
+					tmp[player] = this.points[player];
+			}, this);
+		}
+		tmp = _.map(tmp, function(pts, pl) {
+			return {name: pl, points: pts};
+		});
+		tmp = _.sortBy(tmp, function(a) {
+			return -a.points;
+		});
+
+		_.each(tmp, function(o) {
+			if(prev_pts != o.points) {
+				if(prev_pts != -1) {
+					out += util.format("%s (%d awesome points); ", prettyList(tmp2), prev_pts);
+					tmp2 = [];
+				}
+				prev_pts = o.points;
+			}
+			tmp2.push(o.name);
+		});
+		out += util.format("%s (%d awesome points)", prettyList(tmp2), prev_pts);
+
+		global.client.send(this.settings.channel, util.format(
+			"Point limit is %s%d%s. The most horrible people: %s",
+			global.client.format.bold,
+			this.settings.plimit,
+			global.client.format.bold,
+			out
+		));
+	}
+
+	swap_cards(user) {
+		if(!this.roundRunning)
+			return;
+		if(_.indexOf(this.players, user) == -1)
+			return;
+		if(this.round_stage == 1)
+			return;
+		if(user == this.czar) {
+			return global.client.send(this.settings.channel, util.format("%s: The card czar can't swap cards.", user));
+		} else if(this.players.length < SWAP_MIN_PLAYERS) {
+			return global.client.send(this.settings.channel, util.format("%s: There must be at least %d players to use !swap.", user, SWAP_MIN_PLAYERS));
+		} else if(this.hasPlayed[user] > 1) {
+			var tmp;
+			if(this.hasPlayed[user] == 2)
+				tmp = "already swapped cards";
+			else if(this.hasPlayed[user] == 3)
+				tmp = "just joined";
+			else if(this.hasPlayed[user] == 4)
+				tmp = "can't play";
+			return global.client.send(this.settings.channel, util.format("%s: You %s this round.", user, tmp));
+		} else if(this.points[user] === 0) {
+			return global.client.send(this.settings.channel, util.format("%s: You need at least one awesome point to use !swap.", user));
+		}
+		// Remove cards from the player and give them new ones
+		this.hasPlayed[user] = 2;
+		this.cards[user] = [];
+		this._refill_cards(user);
+		this._notice_cards(user);
+		global.client.send(this.settings.channel, util.format(
+			"%s swapped all of their cards. They don't play this round and lose a point. %s now has %d awesome points.",
+			user,
+			user,
+			--this.points[user]
+		));
+		this._check_all_played();
+	}
+
+	force_pass(user) {
+		if(!this.roundRunning)
+			return;
+		if(_.indexOf(this.players, user) == -1)
+			return;
+		if(user == this.czar)
+			return this._round();
+
+		this.hasPlayed[user] = 4;
+		this._check_all_played();
+	}
+
+	force_limit(limit) {
+		var high_pts, low_limit;
+
+		high_pts = _.max(this.points);
+		low_limit = high_pts + 1; // Lowest possible point limit
+
+		if(limit === 0) {
+			this.settings.plimit = limit;
+			return global.client.send(this.settings.channel, "The point limit is now infinite.");
+		} else if(limit < low_limit) {
+			return global.client.send(
+				this.settings.channel,
+				util.format("The lowest point limit you can set this game to is %d. If you want to make the game infinite, set it to 0.", low_limit)
+			);
+		} else {
+			this.settings.plimit = limit;
+			return global.client.send(this.settings.channel, util.format("The point limit is now %d.", limit));
+		}
+	}
+
+	force_last_round(round_no) {
+		if(round_no !== undefined)
+			this.last_round = round_no;
+		else
+			this.last_round = this.round_no;
+
+		global.client.send(this.settings.channel, util.format("The game will stop at the end of round %d.", this.last_round));
+	}
+
+	force_leave(user) {
+		this.leave(user);
+	}
+
+	/* private methods */
+
+	_check_players() {
+		if(this.players.length >= 3)
+			return true;
+		if(this.timer_start.isRunning())
+			return true; // Don't complain about lack of users if initial period not elapsed yet
+		if(this.timer_stop.isRunning())
+			return false; // Don't complain twice
+		this.roundRunning = false;
+		this.timer_round.stop()
+		global.client.send(this.settings.channel, util.format("Not enough players to play (need at least 3). Stopping in %d minutes if not enough players.", NOT_ENOUGH_PLAYERS_WAIT_MINS));
+		this.timer_stop.start();
+		return false;
+	}
+
+	_start_game() {
+		this.timer_start.stop();
+		this.timer_stop.stop()
+		global.client.send(this.settings.channel, util.format(
+			"Starting %s with '%s' cards: %s",
+			this.settings.plimit > 0 ? util.format("a game till %d points", this.settings.plimit) : "an infinite game",
+			this.settings.coll,
+			cards.collectionInfo(this.settings.coll)
+		));
+		this._round();
+	}
+
+	_notice_cards(pl) {
+		if(!pl) {
+			_.each(this.players, function(pl) {
+				if(pl == this.czar)
+					return;
+				this._notice_cards(pl);
+			}, this);
+		} else {
+			if(_.indexOf(this.players, pl) == -1)
+				return;
+			var cards = [];
+			_.each(this.cards[pl], function(card, i) {
+				cards.push(util.format("%s[%d]%s %s", client.format.bold, i+1, client.format.bold, card));
+			});
+			if(cards.length > 0)
+				_.each(_split_card_list(cards), function (line) {
+					global.client.notice(pl, line);
+				});
+			else
+				global.client.notice(pl, "You don't have any cards.");
+		}
+	}
+
+	_display_black_card() {
+		global.client.send(this.settings.channel, util.format(
+			"%sCARD:%s %s %s",
+			global.client.format.bold,
+			global.client.format.bold,
+			_format_card(this.q_card),
+			_format_card_opts(this.q_card)
+		));
+	}
+
+	_round() {
 		var tmp;
-		if(games[gameid].hasPlayed[user] == 2)
-			tmp = "already swapped cards";
-		else if(games[gameid].hasPlayed[user] == 3)
-			tmp = "just joined";
-		else if(games[gameid].hasPlayed[user] == 4)
-			tmp = "can't play";
-		return global.client.send(games[gameid].settings.channel, util.format("%s: You %s this round.", user, tmp));
-	} else if(games[gameid].points[user] === 0) {
-		return global.client.send(games[gameid].settings.channel, util.format("%s: You need at least one awesome point to use !swap.", user));
+
+		this.round_no++;
+		if(_.indexOf(this.players, this.czar) == -1)
+			tmp = 0;
+		else
+			tmp = (_.indexOf(this.players, this.czar) + 1) % this.players.length;
+		this.czar = this.players[tmp];
+		this.round_stage = 0;
+		this.hasPlayed = {};
+		this.picks = {};
+
+		global.client.send(this.settings.channel, util.format(
+			"Round %d! %s is the card czar.",
+			this.round_no,
+			this.czar
+		));
+		this.q_card = this.cardpool.randomQuestionCard();
+		this._display_black_card();
+		this._refill_cards();
+		this._notice_cards();
+		this.roundRunning = true;
+		this.timer_round.resumeFrom(-1 * ROUND_MAX_PLAY_TIME_MINS * 60);
 	}
-	// Remove cards from the player and give them new ones
-	games[gameid].hasPlayed[user] = 2;
-	games[gameid].cards[user] = [];
-	_refill_cards(gameid, user);
-	_notice_cards(gameid, user);
-	global.client.send(games[gameid].settings.channel, util.format(
-		"%s swapped all of their cards. They don't play this round and lose a point. %s now has %d awesome points.",
-		user,
-		user,
-		--games[gameid].points[user]
-	));
-	_check_all_played(gameid);
-}
 
-function game_force_pass(gameid, user)
-{
-	if(!games[gameid].roundRunning)
-		return;
-	if(_.indexOf(games[gameid].players, user) == -1)
-		return;
-	if(user == games[gameid].czar)
-		return _round(gameid);
+	_check_all_played() {
+		var tmp = this.players;
 
-	games[gameid].hasPlayed[user] = 4;
-	_check_all_played(gameid);
-}
+		_.each(this.hasPlayed, function(_trash, player) {
+			tmp = _.without(tmp, player);
+		});
+		tmp = _.without(tmp, this.czar);
 
-function game_force_limit(gameid, limit)
-{
-	var high_pts, low_limit;
+		if(tmp.length === 0) {
+			tmp = this.players;
+			tmp = _.without(tmp, this.czar);
+			_.each(this.hasPlayed, function(a, pl) {
+				if(a == 2 || a == 3 || a == 4) { // player swapped, joined new or can't play (other reason)
+					tmp = _.without(tmp, pl);
+				}
+			});
 
-	high_pts = _.max(games[gameid].points);
-	low_limit = high_pts + 1; // Lowest possible point limit
+			_.each(tmp, function(user) {
+				this.cards[user] = removeByIndex(this.cards[user], this.pickIds[user]);
+			}, this);
 
-	if(limit === 0) {
-		games[gameid].settings.plimit = limit;
-		return global.client.send(games[gameid].settings.channel, "The point limit is now infinite.");
-	} else if(limit < low_limit) {
-		return global.client.send(
-			games[gameid].settings.channel,
-			util.format("The lowest point limit you can set this game to is %d. If you want to make the game infinite, set it to 0.", low_limit)
-		);
-	} else {
-		games[gameid].settings.plimit = limit;
-		return global.client.send(games[gameid].settings.channel, util.format("The point limit is now %d.", limit));
+			this.pick_order = _.shuffle(tmp);
+			global.client.send(this.settings.channel, "Everyone has played. Here are the entries:");
+			_.each(this.pick_order, function(player, i) {
+				global.client.send(this.settings.channel, util.format(
+					"%d: %s", i+1, _format_card(this.q_card, this.picks[player])
+				));
+			}, this);
+
+			this.round_stage = 1;
+			this.timer_round.stop();
+			this.timer_round.resumeFrom(-1 * ROUND_MAX_CZAR_TIME_MINS * 60);
+			global.client.send(this.settings.channel, util.format("%s: Select the winner using !pick", this.czar));
+		}
 	}
+
+	_check_plimit() {
+		if(this.last_round == this.round_no) {
+			var won = [], tmp;
+
+			// Find out highest score and collect all players with that score
+			tmp = _.max(this.points);
+			_.each(this.points, function(pts, pl) {
+				if(pts == tmp)
+					won.push(pl);
+			});
+
+			if(won.length == 1)
+				tmp = util.format("%s was the winner with %d points", won[0], tmp);
+			else
+				tmp = util.format("%s were the winners with %d points each", prettyList(tmp), tmp);
+			global.client.send(this.settings.channel, util.format(
+				"Sorry to ruin the fun, but that was the last round of the game! %s!",
+				tmp
+			));
+
+			this.show_points(true);
+			return this.stop();
+		}
+		if(this.settings.plimit <= 0)
+			return false;
+		var r = false;
+		_.each(this.points, function(pts, pl) {
+			if(r)
+				return; // if someone already won and the game was deleted, don't do anything
+			if(pts == this.settings.plimit) {
+				global.client.send(this.settings.channel, util.format(
+					"%s reached the limit of %d awesome points and is the most horrible person around! Congratulations!",
+					pl,
+					this.settings.plimit
+				));
+				this.show_points(true);
+				this.stop();
+				r = true;
+			}
+		}, this);
+		return r;
+	}
+
+	_refill_cards(pl) {
+		if(!pl)
+			return _.each(this.players, function(pl) { this._refill_cards(pl); }, this);
+		var draw = 10;
+
+		if(this.q_card.pick > 2) {
+			draw = draw + (this.q_card.pick - 1);
+		}
+
+		if(!this.cards[pl])
+			this.cards[pl] = [];
+		while(this.cards[pl].length < draw)
+			this.cards[pl].push(this.cardpool.randomAnswerCard());
+	}
+
+	/* timers */
+
+	_timer_start() {
+		if(this._check_players())
+			this._start_game();
+	}
+
+	_timer_stop() {
+		if(this.players.length < 3)
+			this.stop();
+		else
+			this._start_game();
+	}
+
+	_timer_round_1min() {
+		global.client.send(this.settings.channel, "Hurry up! 1 minute left.");
+		this.show_status();
+	}
+
+	_timer_round_30sec() {
+		global.client.send(this.settings.channel, "30 seconds left.");
+	}
+
+	_timer_round_10sec() {
+		global.client.send(this.settings.channel, "10 seconds left.");
+	}
+
+	_timer_round_elapsed() {
+		global.client.send(this.settings.channel, "Time's up.");
+		// Directly start a new round unless enough people have picked
+		if(_.size(this.picks) >= 2 && this.round_stage == 0) {
+			_.each(this.players, function(pl) {
+				if(this.hasPlayed[pl])
+					return;
+				this.hasPlayed[pl] = 4;
+			}, this);
+			this._check_all_played();
+		} else {
+			this._round();
+		}
+	}
+
 }
 
-function game_last_round(gameid, round_no)
-{
-	if(round_no !== null && round_no !== undefined)
-		games[gameid].last_round = round_no;
-	else
-		games[gameid].last_round = games[gameid].round_no;
-
-	global.client.send(games[gameid].settings.channel, util.format("The game will stop at the end of round %d.", games[gameid].last_round));
-}
-
-function game_force_leave(gameid, user)
-{
-	leave_game(gameid, user);
-}
-
-/* "internal" game functions */
+/* game-related helper functions */
 
 function _format_card(card, values)
 {
@@ -422,34 +643,6 @@ function _format_card_opts(card, values)
 	}
 }
 
-function _check_players(gameid)
-{
-	if(games[gameid].players.length >= 3)
-		return true;
-	if(games[gameid].timer_start.isRunning())
-		return true; // Don't complain about lack of users if initial period not elapsed yet
-	if(games[gameid].timer_stop.isRunning())
-		return false; // Don't complain twice
-	games[gameid].roundRunning = false;
-	games[gameid].timer_round.stop()
-	global.client.send(games[gameid].settings.channel, util.format("Not enough players to play (need at least 3). Stopping in %d minutes if not enough players.", NOT_ENOUGH_PLAYERS_WAIT_MINS));
-	games[gameid].timer_stop.start();
-	return false;
-}
-
-function _start_game(gameid)
-{
-	games[gameid].timer_start.stop();
-	games[gameid].timer_stop.stop()
-	global.client.send(games[gameid].settings.channel, util.format(
-		"Starting %s with '%s' cards: %s",
-		games[gameid].settings.plimit > 0 ? util.format("a game till %d points", games[gameid].settings.plimit) : "an infinite game",
-		games[gameid].settings.coll,
-		cards.collectionInfo(games[gameid].settings.coll)
-	));
-	_round(gameid);
-}
-
 function _split_card_list(cards) {
 	var lines, curLine, len;
 
@@ -472,208 +665,7 @@ function _split_card_list(cards) {
 	return lines;
 }
 
-function _notice_cards(gameid, pl)
-{
-	if(!pl) {
-		_.each(games[gameid].players, function(pl) {
-			if(pl == games[gameid].czar)
-				return;
-			_notice_cards(gameid, pl);
-		});
-	} else {
-		if(_.indexOf(games[gameid].players, pl) == -1)
-			return;
-		var cards = [];
-		_.each(games[gameid].cards[pl], function(card, i) {
-			cards.push(util.format("%s[%d]%s %s", client.format.bold, i+1, client.format.bold, card));
-		});
-		if(cards.length > 0)
-			_.each(_split_card_list(cards), function (line) {
-				global.client.notice(pl, line);
-			});
-		else
-			global.client.notice(pl, "You don't have any cards.");
-	}
-}
-
-function _display_black_card(gameid) {
-	global.client.send(games[gameid].settings.channel, util.format(
-		"%sCARD:%s %s %s",
-		global.client.format.bold,
-		global.client.format.bold,
-		_format_card(games[gameid].q_card),
-		_format_card_opts(games[gameid].q_card)
-	));
-}
-
-function _round(gameid)
-{
-	var tmp;
-
-	games[gameid].round_no++;
-	if(_.indexOf(games[gameid].players, games[gameid].czar) == -1)
-		tmp = 0;
-	else
-		tmp = (_.indexOf(games[gameid].players, games[gameid].czar) + 1) % games[gameid].players.length;
-	games[gameid].czar = games[gameid].players[tmp];
-	games[gameid].round_stage = 0;
-	games[gameid].hasPlayed = {};
-	games[gameid].picks = {};
-
-	global.client.send(games[gameid].settings.channel, util.format(
-		"Round %d! %s is the card czar.",
-		games[gameid].round_no,
-		games[gameid].czar
-	));
-	games[gameid].q_card = games[gameid].cardpool.randomQuestionCard();
-	_display_black_card(gameid);
-	_refill_cards(gameid);
-	_notice_cards(gameid);
-	games[gameid].roundRunning = true;
-	games[gameid].timer_round.resumeFrom(-1 * ROUND_MAX_PLAY_TIME_MINS * 60);
-}
-
-function _check_all_played(gameid)
-{
-	var tmp = games[gameid].players;
-
-	_.each(games[gameid].hasPlayed, function(_trash, player) {
-		tmp = _.without(tmp, player);
-	});
-	tmp = _.without(tmp, games[gameid].czar);
-
-	if(tmp.length === 0) {
-		tmp = games[gameid].players;
-		tmp = _.without(tmp, games[gameid].czar);
-		_.each(games[gameid].hasPlayed, function(a, pl) {
-			if(a == 2 || a == 3 || a == 4) { // player swapped, joined new or can't play (other reason)
-				tmp = _.without(tmp, pl);
-			}
-		});
-
-		_.each(tmp, function(user) {
-			games[gameid].cards[user] = removeByIndex(games[gameid].cards[user], games[gameid].pickIds[user]);
-		});
-
-		games[gameid].pick_order = _.shuffle(tmp);
-		global.client.send(games[gameid].settings.channel, "Everyone has played. Here are the entries:");
-		_.each(games[gameid].pick_order, function(player, i) {
-			global.client.send(games[gameid].settings.channel, util.format(
-				"%d: %s", i+1, _format_card(games[gameid].q_card, games[gameid].picks[player])
-			));
-		});
-
-		games[gameid].round_stage = 1;
-		games[gameid].timer_round.stop();
-		games[gameid].timer_round.resumeFrom(-1 * ROUND_MAX_CZAR_TIME_MINS * 60);
-		global.client.send(games[gameid].settings.channel, util.format("%s: Select the winner using !pick", games[gameid].czar));
-	}
-}
-
-function _check_plimit(gameid)
-{
-	if(games[gameid].last_round == games[gameid].round_no) {
-		var won = [], tmp;
-
-		// Find out highest score and collect all players with that score
-		tmp = _.max(games[gameid].points);
-		_.each(games[gameid].points, function(pts, pl) {
-			if(pts == tmp) {
-				won.push(pl);
-			}
-		});
-
-		if(won.length == 1)
-			tmp = util.format("%s was the winner with %d points", won[0], tmp);
-		else
-			tmp = util.format("%s were the winners with %d points each", prettyList(tmp), tmp);
-		global.client.send(games[gameid].settings.channel, util.format(
-			"Sorry to ruin the fun, but that was the last round of the game! %s!",
-			tmp
-		));
-
-		game_show_points(gameid, true);
-		return stop_game(gameid);
-	}
-	if(games[gameid].settings.plimit <= 0)
-		return false;
-	var r = false;
-	_.each(games[gameid].points, function(pts, pl) {
-		if(!games[gameid])
-			return; // if someone already won and the game was deleted, don't do anything
-		if(pts == games[gameid].settings.plimit) {
-			global.client.send(games[gameid].settings.channel, util.format(
-				"%s reached the limit of %d awesome points and is the most horrible person around! Congratulations!",
-				pl,
-				games[gameid].settings.plimit
-			));
-			game_show_points(gameid, true);
-			stop_game(gameid);
-			r = true;
-		}
-	});
-	return r;
-}
-
-function _refill_cards(gameid, pl)
-{
-	if(!pl)
-		return _.each(games[gameid].players, function(pl) { _refill_cards(gameid, pl); });
-	var draw = 10;
-
-	if(games[gameid].q_card.pick > 2) {
-		draw = draw + (games[gameid].q_card.pick - 1);
-	}
-
-	if(!games[gameid].cards[pl])
-		games[gameid].cards[pl] = [];
-	while(games[gameid].cards[pl].length < draw)
-		games[gameid].cards[pl].push(games[gameid].cardpool.randomAnswerCard());
-}
-
-/* timers */
-
-function _timer_start(gameid) {
-	if(_check_players(gameid))
-		_start_game(gameid);
-}
-
-function _timer_stop(gameid) {
-	if(games[gameid].players.length < 3)
-		stop_game(gameid);
-	else
-		_start_game(gameid);
-}
-
-function _timer_round_1min(gameid) {
-	global.client.send(games[gameid].settings.channel, "Hurry up! 1 minute left.");
-	game_show_status(gameid);
-}
-
-function _timer_round_30sec(gameid) {
-	global.client.send(games[gameid].settings.channel, "30 seconds left.");
-}
-
-function _timer_round_10sec(gameid) {
-	global.client.send(games[gameid].settings.channel, "10 seconds left.");
-}
-
-function _timer_round_elapsed(gameid) {
-	global.client.send(games[gameid].settings.channel, "Time's up.");
-	// Directly start a new round unless enough people have picked
-	if(_.size(games[gameid].picks) >= 2 && games[gameid].round_stage == 0) {
-		_.each(games[gameid].players, function(pl) {
-			if(games[gameid].hasPlayed[pl])
-				return;
-			games[gameid].hasPlayed[pl] = 4;
-		});
-		_check_all_played(gameid);
-	} else {
-		_round(gameid);
-	}
-}
-
-/* helper functions */
+/* generic helper functions */
 
 function parseIntEx(str) { // A better parseInt
 	var n;
@@ -784,17 +776,18 @@ function cmd_start(evt, args) {
 		return evt.reply("Only admins can start unlimited games.");
 	}
 
-	start_game(evt.channel, settings);
-	join_game(evt.channel, evt.user);
+	var game = games[evt.channel] = new Game(settings, function() { games[evt.channel] = undefined; });
+	game.join(evt.user);
 }
 
 function cmd_stop(evt, args) {
 	if(!games[evt.channel])
 		return evt.reply("No game running, start one with !start.");
+	var game = games[evt.channel];
 	if(evt.has_op) {
-		stop_game(evt.channel); // not passing user stops the game unconditionally
+		game.stop(); // stop game unconditionally
 	} else {
-		if(!stop_game(evt.channel, evt.user))
+		if(!game.stop(evt.user))
 			evt.reply("You can't stop the game.");
 	}
 }
@@ -805,37 +798,37 @@ function cmd_join(evt, args) {
 		if(!games[evt.channel]) // Abort if game was not started for some reason
 			return;
 	}
-	join_game(evt.channel, evt.user);
+	games[evt.channel].join(evt.user);
 }
 
 function cmd_leave(evt, args) {
 	if(!games[evt.channel])
 		return;
-	leave_game(evt.channel, evt.user);
+	games[evt.channel].leave(evt.user);
 }
 
 function cmd_players(evt, args) {
 	if(!games[evt.channel])
 		return;
-	evt.reply("Currently playing: " + prettyList(game_get_players(evt.channel)));
+	evt.reply("Currently playing: " + prettyList(games[evt.channel].get_players()));
 }
 
 function cmd_cards(evt, args) {
 	if(!games[evt.channel])
 		return;
-	game_notice_cards(evt.channel, evt.user);
+	games[evt.channel].notice_cards(evt.user);
 }
 
 function cmd_card(evt, args) {
 	if(!games[evt.channel])
 		return;
-	_display_black_card(evt.channel);
+	games[evt.channel].show_question_card();
 }
 
 function cmd_status(evt, args) {
 	if(!games[evt.channel])
 		return;
-	game_show_status(evt.channel);
+	games[evt.channel].show_status();
 }
 
 function cmd_pick(evt, args) {
@@ -851,25 +844,25 @@ function cmd_pick(evt, args) {
 			a.push(parseIntEx(arg));
 		} catch(e) {}
 	});
-	game_pick(evt.channel, evt.user, a);
+	games[evt.channel].pick(evt.user, a);
 }
 
 function cmd_retract(evt, args) {
 	if(!games[evt.channel])
 		return;
-	game_retract(evt.channel, evt.user);
+	games[evt.channel].retract(evt.user);
 }
 
 function cmd_points(evt, args) {
 	if(!games[evt.channel])
 		return;
-	game_show_points(evt.channel);
+	games[evt.channel].show_points();
 }
 
 function cmd_swap(evt, args) {
 	if(!games[evt.channel])
 		return;
-	game_swap_cards(evt.channel, evt.user);
+	games[evt.channel].swap_cards(evt.user);
 }
 
 function cmd_fpass(evt, args) {
@@ -877,7 +870,7 @@ function cmd_fpass(evt, args) {
 		return;
 	if(!evt.has_op)
 		return;
-	game_force_pass(evt.channel, args.trim());
+	games[evt.channel].force_pass(args.trim());
 }
 
 function cmd_flimit(evt, args) {
@@ -888,7 +881,7 @@ function cmd_flimit(evt, args) {
 	if(args === undefined)
 		return evt.reply("No limit specified");
 
-	var num = args.trim().split(" ")[0].trim();
+	var num = args.trim();
 
 	try {
 		num = parseIntEx(num);
@@ -896,7 +889,7 @@ function cmd_flimit(evt, args) {
 		return evt.reply("Invalid argument");
 	}
 
-	game_force_limit(evt.channel, num);
+	games[evt.channel].force_limit(num);
 }
 
 function cmd_flastround(evt, args) {
@@ -904,10 +897,11 @@ function cmd_flastround(evt, args) {
 		return;
 	if(!evt.has_op)
 		return;
+	var game = games[evt.channel];
 	if(args === undefined)
-		return game_last_round(evt.channel, null);
+		return game.force_last_round();
 
-	var num = args.trim().split(" ")[0].trim();
+	var num = args.trim();
 
 	try {
 		num = parseIntEx(num);
@@ -915,7 +909,7 @@ function cmd_flastround(evt, args) {
 		return evt.reply("Invalid argument");
 	}
 
-	game_last_round(evt.channel, num);
+	game.force_last_round(num);
 }
 
 function cmd_fleave(evt, args) {
@@ -923,7 +917,7 @@ function cmd_fleave(evt, args) {
 		return;
 	if(!evt.has_op)
 		return;
-	game_force_leave(evt.channel, args.trim());
+	games[evt.channel].force_leave(args.trim());
 }
 
 /* IRC events */
@@ -931,7 +925,7 @@ function cmd_fleave(evt, args) {
 function evt_part(evt) {
 	if(!games[evt.channel])
 		return;
-	leave_game(evt.channel, evt.user);
+	games[evt.channel].leave(evt.user);
 }
 
 function evt_quit(evt) {
@@ -939,14 +933,14 @@ function evt_quit(evt) {
 	_.each(global.config.channels, function(channel) {
 		if(!games[channel])
 			return;
-		leave_game(channel, evt.user);
+		games[channel].leave(evt.user);
 	});
 }
 
 function evt_kick(evt) {
 	if(!games[evt.channel])
 		return;
-	leave_game(evt.channel, evt.kicked);
+	games[evt.channel].leave(evt.kicked);
 }
 
 
