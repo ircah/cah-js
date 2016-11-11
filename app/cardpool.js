@@ -2,40 +2,41 @@ var _ = require('underscore');
 
 var cards = require('./cards.js');
 
-function CardPool(collection) {
-	this.answerCards = cards.getAnswerCards(collection);
-	this.answerCardIndex = 0;
-	this.questionCards = cards.getQuestionCards(collection);
-	this.questionCardIndex = 0;
+class CardPool {
+	constructor(collection) {
+		this.answerCards = cards.getAnswerCards(collection);
+		this.answerCardIndex = 0;
+		this.questionCards = cards.getQuestionCards(collection);
+		this.questionCardIndex = 0;
 
-	var reshuffleQuestionCards = function() {
+		this.reshuffleCards();
+	}
+	_reshuffleQuestionCards() {
 		this.questionCards = _.shuffle(this.questionCards);
 		this.questionCardIndex = 0;
-	}.bind(this);
-	var reshuffleAnswerCards = function() {
+	}
+	_reshuffleAnswerCards() {
 		this.answerCards = _.shuffle(this.answerCards);
 		this.answerCardIndex = 0;
-	}.bind(this);
-	this.randomQuestionCard = function() {
+	}
+	randomQuestionCard() {
 		var card = this.questionCards[this.questionCardIndex];
 		this.questionCardIndex++;
 		if(this.questionCardIndex >= this.questionCards.length)
-			reshuffleQuestionCards();
+			this._reshuffleQuestionCards();
 		return card;
 	}
-	this.randomAnswerCard = function() {
+	randomAnswerCard() {
 		var card = this.answerCards[this.answerCardIndex];
 		this.answerCardIndex++;
 		if(this.answerCardIndex >= this.answerCards.length)
-			reshuffleAnswerCards();
+			this._reshuffleAnswerCards();
 		return card;
 	}
-	this.reshuffleCards = function() {
-		reshuffleAnswerCards();
-		reshuffleQuestionCards();
+	reshuffleCards() {
+		this._reshuffleAnswerCards();
+		this._reshuffleQuestionCards();
 	}
-
-	this.reshuffleCards();
 }
 
 exports.CardPool = CardPool;
