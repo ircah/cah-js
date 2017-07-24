@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var util = require('util');
 
-var commands = [];
+var commands = {};
 var eventsPart = [];
 var eventsQuit = [];
 var eventsKick = [];
