@@ -33,7 +33,7 @@ exports._handle = function(evt, msg) {
 	var m = msg.match(/^!([A-Za-z0-9]+)(?: (.*))?$/);
 	if(!m)
 		return;
-	if(commands[m[1].toLowerCase()])
+	if(commands.hasOwnProperty(m[1].toLowerCase()))
 		commands[m[1].toLowerCase()](evt, m[2]);
 	else
 		console.log("[commands.js] unknown command: '!%s'", m[1]);
