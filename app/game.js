@@ -551,7 +551,7 @@ class Game {
 			return _.each(this.players, function(pl) { this._refill_cards(pl); }, this);
 		var draw = 10;
 
-		if(this.q_card.pick > 2) {
+		if(this.q_card.pick > 2 && pl != this.czar) {
 			draw = draw + (this.q_card.pick - 1);
 		}
 
