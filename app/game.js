@@ -686,8 +686,6 @@ function _ircModeStr(mode, nicks) {
 }
 
 function ircVoice(client, channel, nicklist) {
-	if(client.voice)
-		return client.voice(channel, nicklist);
 	var tmp = [];
 	_.each(nicklist, function(nick) {
 		tmp.push(nick);
@@ -701,8 +699,6 @@ function ircVoice(client, channel, nicklist) {
 }
 
 function ircDevoice(client, channel, nicklist) {
-	if(client.devoice)
-		return client.devoice(channel, nicklist);
 	var tmp = [];
 	_.each(nicklist, function(nick) {
 		tmp.push(nick);
